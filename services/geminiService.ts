@@ -539,6 +539,7 @@ const preScreenScam = (text: string): PreScreenResult => {
     return { isDefiniteScam: true, confidence: 0.95 };
 
   // Shortened URL alone
+  if (/^https?:\/\/(bit\.ly|cutt\.ly|tinyurl\.com|rb\.gy|is\.gd|v\.gd|t\.co|short\.link|ow\.ly|goo\.gl|tiny\.cc|lnkd\.in)\/\S+$/i.test(text.trim()))
     return { isDefiniteScam: true, confidence: 0.97 };
   if (/\b(otp|one.time.pin|one.time.password|mpin|passcode)\b/i.test(t) &&
       /\b(send|ibigay|ibahagi|share|enter|ilagay|i-type|type)\b/i.test(t))
