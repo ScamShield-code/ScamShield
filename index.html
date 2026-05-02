@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ScamShield</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="A cybersecurity awareness app for everyone to help stay safe online from scams and cybercrime" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="ScamShield" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="msapplication-config" content="/icons/browserconfig.xml" />
+    <meta name="msapplication-TileColor" content="#2563eb" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Icons -->
+    <link rel="icon" href="/icons/icon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon (1).png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
+    
+    <!-- Styles - Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <noscript>
+      <link rel="stylesheet" href="https://unpkg.com/tailwindcss@3.4.0/dist/tailwind.min.css">
+    </noscript>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap');
+      
+      :root {
+        --c-bg:        #0f1117;
+        --c-surface:   #1a1d2e;
+        --c-surface2:  #222640;
+        --c-border:    rgba(99,102,241,0.25);
+        --c-primary:   #6366f1;
+        --c-primary2:  #818cf8;
+        --c-accent:    #06b6d4;
+        --c-danger:    #f43f5e;
+        --c-success:   #10b981;
+        --c-warn:      #f59e0b;
+        --c-text:      #e2e8f0;
+        --c-muted:     #94a3b8;
+        --glow-blue:   0 0 20px rgba(99,102,241,0.45), 0 0 40px rgba(99,102,241,0.2);
+        --glow-cyan:   0 0 20px rgba(6,182,212,0.45),  0 0 40px rgba(6,182,212,0.2);
+        --glow-red:    0 0 20px rgba(244,63,94,0.5),   0 0 40px rgba(244,63,94,0.25);
+        --glow-green:  0 0 20px rgba(16,185,129,0.45), 0 0 40px rgba(16,185,129,0.2);
+        --glow-amber:  0 0 20px rgba(245,158,11,0.45), 0 0 40px rgba(245,158,11,0.2);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        font-family: 'Lexend', sans-serif;
+        background: var(--c-bg);
+        color: var(--c-text);
+        margin: 0; padding: 0;
+        min-height: 100vh;
+      }
+
+      /* ── Scrollbar ── */
+      ::-webkit-scrollbar { width: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.4); border-radius: 4px; }
+
+      /* ── Glow utilities ── */
+      .glow-blue  { box-shadow: var(--glow-blue);  }
+      .glow-cyan  { box-shadow: var(--glow-cyan);  }
+      .glow-red   { box-shadow: var(--glow-red);   }
+      .glow-green { box-shadow: var(--glow-green); }
+      .glow-amber { box-shadow: var(--glow-amber); }
+
+      /* ── Glass card ── */
+      .glass {
+        background: rgba(26,29,46,0.85);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--c-border);
+      }
+      .glass-light {
+        background: rgba(34,38,64,0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(99,102,241,0.2);
+      }
+
+      /* ── Gradient text ── */
+      .grad-text {
+        background: linear-gradient(135deg, #818cf8 0%, #06b6d4 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .grad-text-danger {
+        background: linear-gradient(135deg, #f43f5e 0%, #fb923c 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      /* ── Animated border glow ── */
+      .border-glow-blue {
+        border: 1.5px solid rgba(99,102,241,0.6);
+        box-shadow: 0 0 12px rgba(99,102,241,0.3), inset 0 0 12px rgba(99,102,241,0.05);
+      }
+      .border-glow-red {
+        border: 1.5px solid rgba(244,63,94,0.6);
+        box-shadow: 0 0 12px rgba(244,63,94,0.3), inset 0 0 12px rgba(244,63,94,0.05);
+      }
+      .border-glow-green {
+        border: 1.5px solid rgba(16,185,129,0.6);
+        box-shadow: 0 0 12px rgba(16,185,129,0.3), inset 0 0 12px rgba(16,185,129,0.05);
+      }
+      .border-glow-amber {
+        border: 1.5px solid rgba(245,158,11,0.6);
+        box-shadow: 0 0 12px rgba(245,158,11,0.3), inset 0 0 12px rgba(245,158,11,0.05);
+      }
+      .border-glow-cyan {
+        border: 1.5px solid rgba(6,182,212,0.6);
+        box-shadow: 0 0 12px rgba(6,182,212,0.3), inset 0 0 12px rgba(6,182,212,0.05);
+      }
+
+      /* ── Pulse glow animation ── */
+      @keyframes pulseGlow {
+        0%, 100% { box-shadow: 0 0 12px rgba(99,102,241,0.4); }
+        50%       { box-shadow: 0 0 28px rgba(99,102,241,0.8), 0 0 50px rgba(99,102,241,0.3); }
+      }
+      @keyframes pulseGlowRed {
+        0%, 100% { box-shadow: 0 0 12px rgba(244,63,94,0.4); }
+        50%       { box-shadow: 0 0 28px rgba(244,63,94,0.8), 0 0 50px rgba(244,63,94,0.3); }
+      }
+      .animate-pulse-glow     { animation: pulseGlow    2s ease-in-out infinite; }
+      .animate-pulse-glow-red { animation: pulseGlowRed 2s ease-in-out infinite; }
+
+      /* ── Shimmer sweep ── */
+      @keyframes shimmerSweep {
+        0%   { transform: translateX(-100%) skewX(-15deg); }
+        100% { transform: translateX(200%)  skewX(-15deg); }
+      }
+      .shimmer-sweep::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
+        animation: shimmerSweep 2.5s infinite;
+        pointer-events: none;
+      }
+
+      /* ── Float animation ── */
+      @keyframes floatY {
+        0%, 100% { transform: translateY(0); }
+        50%       { transform: translateY(-6px); }
+      }
+      .animate-float { animation: floatY 3s ease-in-out infinite; }
+
+      /* ── Slide animations ── */
+      .animate-slideUp  { animation: slideUp  0.5s cubic-bezier(0.16,1,0.3,1) forwards; }
+      .animate-fadeIn   { animation: fadeIn   0.4s ease-out forwards; }
+      .animate-popIn    { animation: popIn    0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+      @keyframes slideUp {
+        from { transform: translateY(100%); opacity: 0; }
+        to   { transform: translateY(0);    opacity: 1; }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes popIn {
+        0%   { transform: scale(0.88); opacity: 0; }
+        70%  { transform: scale(1.04); opacity: 1; }
+        100% { transform: scale(1);    opacity: 1; }
+      }
+
+      /* ── Bounce short ── */
+      .animate-bounce-short { animation: bounceShort 1.8s ease-in-out infinite; }
+      @keyframes bounceShort {
+        0%, 100% { transform: translateY(0); }
+        50%       { transform: translateY(-7px); }
+      }
+
+      /* ── Shimmer button ── */
+      .animate-shimmer {
+        background: linear-gradient(90deg, #6366f1 0%, #818cf8 40%, #06b6d4 60%, #6366f1 100%);
+        background-size: 200% 100%;
+        animation: shimmerBg 1.8s infinite linear;
+      }
+      @keyframes shimmerBg {
+        0%   { background-position: 0% 0; }
+        100% { background-position: 200% 0; }
+      }
+
+      /* ── Safe shadow (legacy) ── */
+      .safe-shadow { box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+
+      /* ── Focus ring ── */
+      textarea:focus, input:focus, select:focus {
+        outline: none !important;
+        border-color: rgba(99,102,241,0.7) !important;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.2) !important;
+      }
+
+      /* ── Button tap ── */
+      button:active { transform: scale(0.94); }
+
+      /* ── Scrollbar for dark theme ── */
+      select {
+        background-color: #1a1d2e;
+        color: #e2e8f0;
+      }
+      option {
+        background-color: #1a1d2e;
+        color: #e2e8f0;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.38.0"
+  }
+}
+</script>
+
+<!-- Tailwind CSS Detection and Fallback -->
+<script>
+  // Check if Tailwind CSS loaded properly
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      // Test if Tailwind classes are working
+      const testElement = document.createElement('div');
+      testElement.className = 'bg-blue-500 text-white p-4 hidden';
+      document.body.appendChild(testElement);
+      
+      const computedStyle = window.getComputedStyle(testElement);
+      const hasBlueBackground = computedStyle.backgroundColor === 'rgb(59, 130, 246)';
+      
+      document.body.removeChild(testElement);
+      
+      if (!hasBlueBackground) {
+        // Add fallback classes to body
+        document.body.classList.add('tailwind-fallback');
+      }
+    }, 1000);
+  });
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
