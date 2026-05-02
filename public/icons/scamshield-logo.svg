@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="50%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.1"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="roundedSquare">
+      <rect width="512" height="512" rx="112" ry="112"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" ry="112" fill="url(#bgGrad)"/>
+
+  <!-- Background glow orb -->
+  <circle cx="256" cy="220" r="180" fill="url(#glowGrad)"/>
+
+  <!-- Outer ring glow -->
+  <circle cx="256" cy="220" r="165" stroke="url(#shieldGrad)" stroke-width="1.5" fill="none" opacity="0.2"/>
+
+  <!-- Shield body -->
+  <path d="M256 72 L368 118 L368 230 C368 300 320 358 256 380 C192 358 144 300 144 230 L144 118 Z"
+        fill="url(#shieldGrad)" opacity="0.15" filter="url(#glow)"/>
+
+  <!-- Shield outline -->
+  <path d="M256 72 L368 118 L368 230 C368 300 320 358 256 380 C192 358 144 300 144 230 L144 118 Z"
+        stroke="url(#shieldGrad)" stroke-width="6" fill="none" filter="url(#softGlow)"/>
+
+  <!-- Inner shield fill (darker) -->
+  <path d="M256 90 L354 130 L354 228 C354 290 312 342 256 362 C200 342 158 290 158 228 L158 130 Z"
+        fill="#1e1b4b" opacity="0.7"/>
+
+  <!-- Scan line (horizontal) -->
+  <line x1="158" y1="228" x2="354" y2="228" stroke="url(#shieldGrad)" stroke-width="1.5" opacity="0.4" stroke-dasharray="6 4"/>
+
+  <!-- Circuit dots on shield -->
+  <circle cx="200" cy="180" r="3" fill="#818cf8" opacity="0.6"/>
+  <circle cx="220" cy="160" r="2" fill="#06b6d4" opacity="0.5"/>
+  <circle cx="312" cy="180" r="3" fill="#818cf8" opacity="0.6"/>
+  <circle cx="292" cy="160" r="2" fill="#06b6d4" opacity="0.5"/>
+
+  <!-- Circuit lines -->
+  <path d="M200 180 L220 180 L220 160" stroke="#818cf8" stroke-width="1.5" fill="none" opacity="0.4"/>
+  <path d="M312 180 L292 180 L292 160" stroke="#818cf8" stroke-width="1.5" fill="none" opacity="0.4"/>
+
+  <!-- Checkmark (main symbol) -->
+  <path d="M196 228 L238 272 L316 188"
+        stroke="url(#shieldGrad)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"
+        fill="none" filter="url(#glow)"/>
+
+  <!-- Checkmark inner (brighter) -->
+  <path d="M196 228 L238 272 L316 188"
+        stroke="white" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"
+        fill="none" opacity="0.9"/>
+
+  <!-- Bottom text area -->
+  <rect x="120" y="400" width="272" height="52" rx="26" fill="url(#shieldGrad)" opacity="0.15"/>
+  <rect x="120" y="400" width="272" height="52" rx="26" stroke="url(#shieldGrad)" stroke-width="1.5" fill="none" opacity="0.5"/>
+
+  <!-- "SS" monogram text -->
+  <text x="256" y="437" font-family="Arial, sans-serif" font-size="26" font-weight="900"
+        fill="url(#shieldGrad)" text-anchor="middle" letter-spacing="6" opacity="0.95">SCAMSHIELD</text>
+</svg>

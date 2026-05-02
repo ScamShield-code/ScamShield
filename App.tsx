@@ -187,14 +187,13 @@ const App: React.FC = () => {
             </p>
           </div>
           <button onClick={handleHeaderIconTap}
-            className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-90 relative overflow-hidden shimmer-sweep"
+            className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-90 relative overflow-hidden"
             style={{
-              background: 'rgba(99,102,241,0.2)',
-              border: '1px solid rgba(99,102,241,0.4)',
-              boxShadow: '0 0 16px rgba(99,102,241,0.3)',
+              background: 'rgba(99,102,241,0.15)',
+              border: '1px solid rgba(99,102,241,0.35)',
+              boxShadow: '0 0 16px rgba(99,102,241,0.25)',
             }}>
-            <i className={`fa-solid ${activeTab === AppTab.ADMIN ? 'fa-shield-halved' : 'fa-user-shield'} text-xl`}
-              style={{ color: '#a5b4fc' }}></i>
+            <img src="/icons/scamshield-logo.svg" alt="ScamShield" className="w-9 h-9" />
           </button>
         </div>
       </header>

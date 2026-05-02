@@ -36,21 +36,15 @@ const SplashScreen: React.FC = () => {
         <div className="relative animate-logo-pop">
           <div className="w-40 h-40 rounded-[2.5rem] flex items-center justify-center relative overflow-hidden"
             style={{
-              background: 'linear-gradient(135deg,rgba(99,102,241,0.2),rgba(6,182,212,0.1))',
-              border: '2px solid rgba(99,102,241,0.5)',
-              boxShadow: '0 0 40px rgba(99,102,241,0.4), 0 0 80px rgba(99,102,241,0.15), inset 0 0 30px rgba(99,102,241,0.1)',
+              background: 'linear-gradient(135deg,rgba(99,102,241,0.15),rgba(6,182,212,0.08))',
+              border: '2px solid rgba(99,102,241,0.4)',
+              boxShadow: '0 0 50px rgba(99,102,241,0.5), 0 0 100px rgba(99,102,241,0.2), inset 0 0 30px rgba(99,102,241,0.08)',
             }}>
-            {/* Inner glow ring */}
+            {/* Animated inner ring */}
             <div className="absolute inset-2 rounded-[2rem] animate-pulse-glow"
               style={{ border: '1px solid rgba(99,102,241,0.3)' }} />
-            <div className="relative z-10">
-              <i className="fa-solid fa-shield-halved text-7xl"
-                style={{ color: '#818cf8', filter: 'drop-shadow(0 0 16px rgba(99,102,241,0.8))' }}></i>
-              <div className="absolute inset-0 flex items-center justify-center pt-2">
-                <i className="fa-solid fa-heart text-2xl animate-heartbeat"
-                  style={{ color: '#f43f5e', filter: 'drop-shadow(0 0 8px rgba(244,63,94,0.8))' }}></i>
-              </div>
-            </div>
+            {/* SVG Logo */}
+            <img src="/icons/scamshield-logo.svg" alt="ScamShield" className="w-32 h-32 relative z-10" />
           </div>
 
           {/* Orbiting dot */}
