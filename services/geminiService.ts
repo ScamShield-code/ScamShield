@@ -781,13 +781,65 @@ const fallbackScorer = (text: string): ScamAnalysis => {
     { hit: /globe.*discount.*billing|smart.*selected.*subscriber|text.*\d+.*to.*\d{8,}/i.test(t), weight: 0.45 },
   ];
 
+  // ── Legit telco / bank message detection ────────────────────────────────
+  // These patterns strongly indicate official carrier or bank messages.
+  // Applied BEFORE scoring to zero-out false positives.
+
+  const isLegitTelco = (
+    // Official TM/Globe sender patterns
+    /\bka-?te?[ae]m\b|\bka-?tm\b|\btm\s+customer|\btm\s+subscriber/i.test(t) ||
+    // Official Globe/Smart/DITO patterns
+    /\bglobe\s+(customer|subscriber|rewards|one|app)\b|\bsmart\s+(subscriber|rewards|bro)\b|\bdito\s+(subscriber|customer)\b/i.test(t) ||
+    // GlobeOne / MyGlobe / MySmart official app references
+    /\bglobeone\b|\bmyglobe\b|\bmysmart\b|\bsmart\s+app\b/i.test(t)
+  ) && (
+    // Must NOT contain suspicious signals
+    !/https?:\/\/(?!globe|smart|tm|dito|gcash|maya)/i.test(t) &&  // no external links (allow official domains)
+    !/otp|mpin|password|passcode/i.test(t) &&                      // no credential requests
+    !/casino|slot|gambl|sabong|bingo/i.test(t)                     // no gambling
+  );
+
+  const isLegitBankTelcoMarketing = (
+    // Real opt-out footer (carriers are required to include this)
+    /\b(t&cs?\s+apply|terms.*apply|nomsg|no\s+msg|txt\s+off|text\s+off|reply\s+stop|unsubscribe|ref#\s*[a-z0-9]+)\b/i.test(t) &&
+    // From a known brand
+    /\b(globe|smart|tm|dito|sun|metrobank|bpi|bdo|gcash|maya|lazada|shopee|grab)\b/i.test(t) &&
+    // No suspicious links or credential requests
+    !/bit\.ly|cutt\.ly|tinyurl|rb\.gy/i.test(t) &&
+    !/otp|mpin|password|passcode/i.test(t) &&
+    !/casino|slot|gambl|sabong/i.test(t)
+  );
+
+  const isLegitPromoNotification = (
+    // Promo expiry / registration reminder from telco
+    /\b(nag-expire|expired|mag-register\s+ulit|promo.*expire|load.*kulang|borrow\s+load)\b/i.test(t) &&
+    /\b(globe|smart|tm|dito|sun|ka-?tm|ka-?te?[ae]m)\b/i.test(t) &&
+    !/https?:\/\/(?!globe|smart|tm|dito)/i.test(t) &&
+    !/otp|mpin|password/i.test(t)
+  );
+
+  // Early exit for confirmed legit telco messages — return SAFE immediately
+  if (isLegitTelco || isLegitBankTelcoMarketing || isLegitPromoNotification) {
+    return {
+      isScam: false,
+      confidence: 0.85,
+      reasonTagalog: 'Mukhang opisyal na mensahe ito mula sa isang lehitimong telco o kumpanya. Walang nakitang mapanganib na palatandaan.',
+      actionTagalog: 'Safe po ito. Maaari na ninyong basahin at sundin ang mga tagubilin.',
+    };
+  }
+
   const legitDiscounts: Array<{ hit: boolean; discount: number }> = [
-    { hit: /welcome.*ka-tm|tm tambayan|globe.*sim|smart.*sim/i.test(t),                discount: 0.35 },
-    { hit: /resibo|receipt|order number|tracking number|delivery/i.test(t),            discount: 0.30 },
+    { hit: /welcome.*ka-tm|tm tambayan|ka-?te?[ae]m|ka-?tm/i.test(t),                 discount: 0.60 },
+    { hit: /globeone|myglobe|mysmart|globe\s+one\s+app/i.test(t),                      discount: 0.55 },
+    { hit: /resibo|receipt|order number|tracking number/i.test(t),                     discount: 0.30 },
     { hit: /official.*website|opisyal.*website|pumunta.*app/i.test(t),                 discount: 0.25 },
     { hit: /^(ok|sige|salamat|oo|hindi|huwag|mahal kita|kumain ka na|ingat)\b/i.test(t.trim()), discount: 0.50 },
+    // Legit telco promo/expiry notifications
+    { hit: /nag-expire.*promo|promo.*expire|mag-register\s+ulit|borrow\s+load.*gcash|libre.*globeone|libre.*gcash.*app/i.test(t), discount: 0.55 },
+    // Legit rewards/loyalty program messages (no external link, no credential request)
+    { hit: /rewards\s+points?|loyalty.*points?|birthday\s+treat|lazada\s+wallet|top-?up.*points?/i.test(t) && !/https?:\/\/(?!globe|smart|lazada|shopee)/i.test(t), discount: 0.50 },
     // Legitimate bank/telco marketing with real opt-out instructions
-    { hit: /\b(nomsg|no msg|txt off|text off|reply stop|unsubscribe)\b.*\b\d{4,5}\b/i.test(t) && /\b(metrobank|bpi|bdo|gcash|maya|globe|smart|pldt|dito)\b/i.test(t) && !/casino|slot|gambl|sabong|bingo|spin|cashback.*game/i.test(t), discount: 0.45 },
+    { hit: /\b(t&cs?\s+apply|nomsg|no\s+msg|txt\s+off|text\s+off|reply\s+stop|ref#)\b/i.test(t) && /\b(metrobank|bpi|bdo|gcash|maya|globe|smart|tm|lazada)\b/i.test(t) && !/casino|slot|gambl|sabong|bingo|spin|cashback.*game/i.test(t), discount: 0.55 },
   ];
 
   let score = features.reduce((s, f) => s + (f.hit ? f.weight : 0), 0);
@@ -928,7 +980,7 @@ DECISION RULES (optimised for high Recall):
 - Social media locked + reactivation link → isScam: true
 - When uncertain, lean toward isScam: true (false negative is more harmful)
 
-SAFE: Normal personal conversations, official telco SIM notices (no link/fee), legitimate delivery tracking (no fee), bank transaction confirmations (no link/OTP request), news articles.
+SAFE: Normal personal conversations, official telco messages (Globe/Smart/TM/DITO promo expiry, load reminders, rewards points, birthday treats, GlobeOne/MySmart app notifications — especially those with "Ka-TM", "Ka-TeaM", "GlobeOne", "T&Cs apply", "REF#", or "Borrow Load via GCash"), official telco SIM notices (no suspicious link/fee), legitimate delivery tracking (no fee), bank transaction confirmations (no link/OTP request), news articles. Do NOT flag official carrier messages as scams just because they mention GCash, rewards, or promos — these are normal telco marketing.
 
 RESPONSE: JSON only — isScam (bool), confidence (0.0–1.0), reasonTagalog (string), actionTagalog (string).
 Use "po/opo" in Tagalog. Be concise and clear for all users.`;
