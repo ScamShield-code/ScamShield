@@ -516,8 +516,26 @@ interface PreScreenResult {
 const preScreenScam = (text: string): PreScreenResult => {
   const t = text.toLowerCase();
 
-  // ── Tier 1: Single absolute signals ─────────────────────────────────────
-  // Suspicious TLD domains with promo/reward language = scam
+  // ── LEGIT TELCO / BANK EARLY EXIT — runs FIRST before any scam rules ────
+  // If the message is clearly from an official PH telco, skip all scam checks.
+  const hasOfficialTelcoMarker =
+    /\bka-?te?[ae]m\b|\bka-?tm\b/i.test(t) ||
+    /\bglobeone\b|\bmyglobe\b|\bmysmart\b/i.test(t) ||
+    /\b(globe|smart|tm|dito|sun)\s+(customer|subscriber|exclusive|promo|app)\b/i.test(t) ||
+    /\btm-exclusive\b|\bglobe-exclusive\b|\bsmart-exclusive\b/i.test(t) ||
+    /\b(easysurf|gosurf|gosakto|gounli|allnet|funpinoy|gowatch|golearn)\d*\b/i.test(t) ||
+    /\b(t&cs?\s+apply|ref#\s*[a-z0-9]+|nomsg|txt\s+off|reply\s+stop)\b/i.test(t);
+
+  const hasNoSuspiciousSignals =
+    !/bit\.ly|cutt\.ly|tinyurl|rb\.gy|is\.gd|\.pw\/|\.cc\/|\.tk\/|\.ml\//i.test(t) &&
+    !/\botp\b|\bmpin\b|\bpassword\b|\bpasscode\b/i.test(t) &&
+    !/casino|slot|gambl|sabong|bingo|panalo\./i.test(t) &&
+    !/\b(estafa|warrant|arestuhin|legal.*action.*pay)\b/i.test(t);
+
+  if (hasOfficialTelcoMarker && hasNoSuspiciousSignals) {
+    return { isDefiniteScam: false, confidence: 0 };
+  }
+  // ────────────────────────────────────────────────────────────────────────
   if (/\b\w+\.(pw|cc|tk|ml|ga|cf|gq|top|click)\b/i.test(t) &&
       /\b(reward|bonus|credit|claim|top.?up|free|handog|perks?|panalo|register|sign.?up)\b/i.test(t))
     return { isDefiniteScam: true, confidence: 0.96 };
@@ -959,12 +977,28 @@ export const analyzeMessage = async (text: string): Promise<ScamAnalysis> => {
   // Layer 2: Cache check — skip cache if pre-screen now flags it as scam
   // (prevents stale "SAFE" results from being returned for newly-detected patterns)
   const cached = cacheService.getScanResult(text);
-  if (cached && cached.isScam) return cached; // trust cached scam results
+
+  // Override stale cached SCAM results for legit telco messages
+  if (cached && cached.isScam) {
+    const preCheck = preScreenScam(text);
+    if (!preCheck.isDefiniteScam && preCheck.confidence === 0) {
+      // Pre-screen explicitly cleared this as legit telco — override stale scam cache
+      const safeResult: ScamAnalysis = {
+        isScam: false,
+        confidence: 0.85,
+        reasonTagalog: 'Mukhang opisyal na mensahe ito mula sa isang lehitimong telco o kumpanya. Walang nakitang mapanganib na palatandaan.',
+        actionTagalog: 'Safe po ito. Maaari na ninyong basahin at sundin ang mga tagubilin.',
+      };
+      cacheService.storeScanResult(text, safeResult);
+      return safeResult;
+    }
+    return cached;
+  }
+
   // For cached safe results, re-validate against current pre-screen before trusting
   if (cached && !cached.isScam) {
     const reValidate = preScreenScam(text);
     if (reValidate.isDefiniteScam) {
-      // Pre-screen now catches this — override the stale cache
       const overrideResult: ScamAnalysis = {
         isScam: true,
         confidence: reValidate.confidence,
