@@ -7,7 +7,6 @@ import Help from './components/Help';
 import AdminDashboard from './components/AdminDashboard';
 import SplashScreen from './components/SplashScreen';
 import PWAUpdateNotification from './components/PWAUpdateNotification';
-import PWAStatus from './components/PWAStatus';
 import { stopVoice } from './services/geminiService';
 import './services/pwaService';
 
@@ -157,7 +156,6 @@ const App: React.FC = () => {
       style={{ background: 'linear-gradient(160deg,#0f1117 0%,#131629 60%,#0f1117 100%)', boxShadow: '0 0 80px rgba(99,102,241,0.15)' }}>
 
       <PWAUpdateNotification />
-      <PWAStatus />
       {showSplash && <SplashScreen />}
       {showAdminLogin && <AdminLoginModal onSuccess={handleAdminLoginSuccess} onCancel={() => setShowAdminLogin(false)} />}
 
