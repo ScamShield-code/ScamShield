@@ -517,7 +517,28 @@ const preScreenScam = (text: string): PreScreenResult => {
   const t = text.toLowerCase();
 
   // ── Tier 1: Single absolute signals ─────────────────────────────────────
-  if (/^https?:\/\/(bit\.ly|cutt\.ly|tinyurl\.com|rb\.gy|is\.gd|v\.gd|t\.co|short\.link|ow\.ly|goo\.gl|tiny\.cc|lnkd\.in)\/\S+$/i.test(text.trim()))
+  // Suspicious TLD domains with promo/reward language = scam
+  if (/\b\w+\.(pw|cc|tk|ml|ga|cf|gq|top|click)\b/i.test(t) &&
+      /\b(reward|bonus|credit|claim|top.?up|free|handog|perks?|panalo|register|sign.?up)\b/i.test(t))
+    return { isDefiniteScam: true, confidence: 0.96 };
+
+  // "panalo" in any domain = Filipino gambling site
+  if (/\bpanalo\.\w+/i.test(t) || /\/\/\w*panalo\w*\./i.test(t))
+    return { isDefiniteScam: true, confidence: 0.96 };
+
+  // Obfuscated peso amounts + link + reward/claim = scam
+  if (/\b[1-9][0o][0o]\b|\bp-?erks?\b/i.test(t) &&
+      /https?:\/\/|www\.|\.\w{2,4}\/\w+/i.test(t) &&
+      /\b(reward|bonus|credit|claim|handog|perks?|top.?up|register)\b/i.test(t))
+    return { isDefiniteScam: true, confidence: 0.95 };
+
+  // Re-engagement gambling: "balik ka na" + reward + link
+  if (/\b(balik\s+ka\s+na|bumalik\s+ka|miss\s+ka\s+na)\b/i.test(t) &&
+      /\b(reward|bonus|perks?|p-erks?|credit|handog|libre|free)\b/i.test(t) &&
+      /https?:\/\/|www\.|\.\w{2,4}\/\w+/i.test(t))
+    return { isDefiniteScam: true, confidence: 0.95 };
+
+  // Shortened URL alone
     return { isDefiniteScam: true, confidence: 0.97 };
   if (/\b(otp|one.time.pin|one.time.password|mpin|passcode)\b/i.test(t) &&
       /\b(send|ibigay|ibahagi|share|enter|ilagay|i-type|type)\b/i.test(t))
@@ -753,6 +774,14 @@ const fallbackScorer = (text: string): ScamAnalysis => {
     { hit: /\b\w*(casino|slot|bet|gaming|gamble|sabong|spin|bingo|poker|lotto|play|lucky)\w*\.(com\.ph|ph|net|online|live|vip|club|art|xyz|io)\b/i.test(t), weight: 0.55 },
     { hit: /daily.*free.*login|free.*login.*reward|login.*reward.*p\d+|top.?up.*\d+%|first.*deposit.*bonus/i.test(t), weight: 0.45 },
     { hit: /p\d{2,}.*free|free.*p\d{2,}|up to p\d+.*game|p\d+.*angpao|angpao.*p\d+/i.test(t), weight: 0.40 },
+    // New: suspicious TLD + promo
+    { hit: /\b\w+\.(pw|cc|tk|ml|ga|cf|gq|top|click)\b/i.test(t),                      weight: 0.55 },
+    // New: panalo in domain
+    { hit: /\bpanalo\.\w+/i.test(t) || /\/\/\w*panalo\w*\./i.test(t),                  weight: 0.60 },
+    // New: obfuscated peso amounts
+    { hit: /\b[1-9][0o][0o]\b|\bp-?erks?\b/i.test(t),                                  weight: 0.35 },
+    // New: re-engagement gambling
+    { hit: /\b(balik\s+ka\s+na|bumalik\s+ka|miss\s+ka\s+na)\b/i.test(t) && /\b(reward|bonus|perks?|credit|handog)\b/i.test(t), weight: 0.45 },
     // Loan scam
     { hit: /processing fee|release fee|insurance fee|notarial fee|anti-money laundering fee/i.test(t), weight: 0.50 },
     { hit: /instant.*loan|guaranteed.*loan|no.*collateral|walang.*collateral|approved.*loan/i.test(t), weight: 0.35 },
@@ -784,8 +813,26 @@ const fallbackScorer = (text: string): ScamAnalysis => {
   // ── Legit telco / bank message detection ────────────────────────────────
   // These patterns strongly indicate official carrier or bank messages.
   // Applied BEFORE scoring to zero-out false positives.
+  // IMPORTANT: Must check for suspicious domains FIRST before granting safe status.
 
-  const isLegitTelco = (
+  // Suspicious domain check — any unknown short domain or .pw/.cc/.tk TLD with promo = scam
+  const hasSuspiciousDomain = /\b\w+\.(pw|cc|tk|ml|ga|cf|gq|top|click|link|site|online|live|vip|club|art|xyz|io|co)\b/i.test(t) ||
+    /\b\w+\.(pw|cc|tk|ml|ga|cf|gq)\//i.test(t);
+
+  // Obfuscated peso/money amounts (e.g. "2OO" for 200, "p-erks", "p3r4")
+  const hasObfuscatedMoney = /\b[1-9][0o][0o]\b|\bp-?erks?\b|\bp[3e]r[4a]\b|\b[₱p]\s*\d+[0o][0o]\b/i.test(t);
+
+  // "panalo" in a domain = gambling site (panalo = "win" in Filipino)
+  const hasPanaloDomain = /\bpanalo\.\w+/i.test(t) || /\/\/\w*panalo\w*\./i.test(t);
+
+  // Re-engagement gambling message patterns
+  const hasGamblingReengagement = /\b(balik\s+ka\s+na|bumalik\s+ka|miss\s+ka\s+na|balik\s+na)\b/i.test(t) &&
+    /\b(reward|bonus|perks?|p-erks?|credit|handog|libre|free)\b/i.test(t);
+
+  // If any of these are present, skip the legit telco check entirely
+  const hasDefiniteSuspiciousSignal = hasSuspiciousDomain || hasObfuscatedMoney || hasPanaloDomain || hasGamblingReengagement;
+
+  const isLegitTelco = !hasDefiniteSuspiciousSignal && (
     // Official TM/Globe sender patterns
     /\bka-?te?[ae]m\b|\bka-?tm\b|\btm\s+customer|\btm\s+subscriber/i.test(t) ||
     // Official Globe/Smart/DITO patterns
@@ -793,25 +840,20 @@ const fallbackScorer = (text: string): ScamAnalysis => {
     // GlobeOne / MyGlobe / MySmart official app references
     /\bglobeone\b|\bmyglobe\b|\bmysmart\b|\bsmart\s+app\b/i.test(t)
   ) && (
-    // Must NOT contain suspicious signals
-    !/https?:\/\/(?!globe|smart|tm|dito|gcash|maya)/i.test(t) &&  // no external links (allow official domains)
-    !/otp|mpin|password|passcode/i.test(t) &&                      // no credential requests
-    !/casino|slot|gambl|sabong|bingo/i.test(t)                     // no gambling
+    !/https?:\/\/(?!globe|smart|tm|dito|gcash|maya)/i.test(t) &&
+    !/otp|mpin|password|passcode/i.test(t) &&
+    !/casino|slot|gambl|sabong|bingo/i.test(t)
   );
 
-  const isLegitBankTelcoMarketing = (
-    // Real opt-out footer (carriers are required to include this)
+  const isLegitBankTelcoMarketing = !hasDefiniteSuspiciousSignal && (
     /\b(t&cs?\s+apply|terms.*apply|nomsg|no\s+msg|txt\s+off|text\s+off|reply\s+stop|unsubscribe|ref#\s*[a-z0-9]+)\b/i.test(t) &&
-    // From a known brand
     /\b(globe|smart|tm|dito|sun|metrobank|bpi|bdo|gcash|maya|lazada|shopee|grab)\b/i.test(t) &&
-    // No suspicious links or credential requests
     !/bit\.ly|cutt\.ly|tinyurl|rb\.gy/i.test(t) &&
     !/otp|mpin|password|passcode/i.test(t) &&
     !/casino|slot|gambl|sabong/i.test(t)
   );
 
-  const isLegitPromoNotification = (
-    // Promo expiry / registration reminder from telco
+  const isLegitPromoNotification = !hasDefiniteSuspiciousSignal && (
     /\b(nag-expire|expired|mag-register\s+ulit|promo.*expire|load.*kulang|borrow\s+load)\b/i.test(t) &&
     /\b(globe|smart|tm|dito|sun|ka-?tm|ka-?te?[ae]m)\b/i.test(t) &&
     !/https?:\/\/(?!globe|smart|tm|dito)/i.test(t) &&
@@ -944,7 +986,7 @@ PHILIPPINE SCAM PATTERNS (2025) — based on NTC, CICC, BSP, and cybersecurity r
 3. Prize/Raffle: advance fee to claim winnings, fake congratulations, "nanalo ka" messages, fake gift cards
 4. Job/Task Scams: pay activation/training fee, Telegram-only jobs, "earn ₱5k daily" tasks, money mule recruitment disguised as admin work, fake remote job recruiters
 5. Romance Scams: foreign professional, money for emergency/travel/customs, dating app strangers asking for money
-6. Illegal Online Gambling: unsolicited casino/slot/sabong promos, free spins, cashback offers, loss-back offers, daily login rewards, top-up bonuses, known illegal PH gambling sites (SuperAce, JiliBet, OKBet, PhilWin, LuckyCola, Lodibet, Hawkplay, Betso88, 747Live, Milyon88, Peraplay, PTGaming, BingoPlus, casinoplus.com.ph, wacb.art, etc.) and ANY unknown domain promoting gambling/gaming with peso rewards. "Highest cashback", "loss back", "free P[amount]", "daily free login rewards", "top-up +X%", "angpao" + any URL = ALWAYS scam.
+6. Illegal Online Gambling: unsolicited casino/slot/sabong promos, free spins, cashback offers, loss-back offers, daily login rewards, top-up bonuses, known illegal PH gambling sites (SuperAce, JiliBet, OKBet, PhilWin, LuckyCola, Lodibet, Hawkplay, Betso88, 747Live, Milyon88, Peraplay, PTGaming, BingoPlus, casinoplus.com.ph, wacb.art, etc.) and ANY unknown domain promoting gambling/gaming with peso rewards. "Highest cashback", "loss back", "free P[amount]", "daily free login rewards", "top-up +X%", "angpao" + any URL = ALWAYS scam. Also watch for: domains with "panalo" (Filipino for win), suspicious TLDs (.pw, .cc, .tk, .ml), obfuscated amounts ("2OO" for 200, "p-erks" for perks/pesos), re-engagement messages ("balik ka na" + reward + link), "reward credit" + unknown domain, "claim period" + unknown link.
 7. Impersonation: BSP, AMLC, NBI, PNP, DTI, BIR, SSS, PhilHealth, Pag-IBIG, LTO, DFA, COMELEC, bank fraud departments, boss/supervisor impersonation asking for gift cards
 8. Fake Seller/E-Commerce: too-good-to-be-true prices, no COD, fake Facebook/Instagram/TikTok shops, fake payment QR codes
 9. Loan Scams/Fake Lending: upfront processing/release/insurance/notarial fees before loan disbursement, guaranteed approval with no collateral, fake lending apps
