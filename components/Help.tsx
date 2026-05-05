@@ -1,7 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
-import { playVoiceWarning, stopVoice, saveUserReport } from '../services/geminiService';
+import React, { useState, useContext, useEffect } from 'react';
+import { saveUserReport } from '../services/geminiService';
 import { ScamType } from '../types';
+import { LangContext } from '../App';
+import { t } from '../services/languageService';
 
 const SCAM_TYPES: ScamType[] = [
   'Phishing / Smishing', 'Investment / Ponzi', 'Prize / Raffle', 'Job Scam / Task Scam',
@@ -20,6 +22,8 @@ const S = {
 };
 
 const Help: React.FC = () => {
+  const { lang } = useContext(LangContext);
+  const ui = t(lang);
   const [called, setCalled] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
@@ -35,23 +39,20 @@ const Help: React.FC = () => {
   const [contactNumber, setContactNumber] = useState(() => localStorage.getItem('trustedNumber') || '+63 917 123 4567');
 
   useEffect(() => {
-    playVoiceWarning("Andito po kami para tumulong. Pindutin ang pulang button para tawagan ang inyong pinagkakatiwalaang tao.");
-    return () => stopVoice();
+    // TTS removed
   }, []);
 
   const handleSave = () => {
     localStorage.setItem('trustedName', contactName);
     localStorage.setItem('trustedNumber', contactNumber);
     setIsEditing(false); setJustSaved(true);
-    playVoiceWarning("Na-save na po ang bagong detalye. Ligtas na po ito.");
     setTimeout(() => setJustSaved(false), 3000);
   };
 
   const handleHelp = async () => {
     if (isEditing || justSaved) return;
     setCalled(true);
-    await playVoiceWarning(`Tinatawagan na po natin si ${contactName}. Sandali lang po.`);
-    setTimeout(() => { setCalled(false); window.location.href = `tel:${contactNumber}`; }, 2000);
+    setTimeout(() => { setCalled(false); window.location.href = `tel:${contactNumber}`; }, 1000);
   };
 
   const handleSubmitReport = () => {
@@ -61,7 +62,6 @@ const Help: React.FC = () => {
       saveUserReport({ platform: reportPlatform, scamType: reportType, description: reportDescription.trim(), contactUsed: reportContact.trim() });
       setReportSubmitting(false); setReportSubmitted(true);
       setReportDescription(''); setReportContact(''); setPrivacyAgreed(false);
-      playVoiceWarning("Salamat po sa inyong ulat. Ligtas na naitala.");
       setTimeout(() => setReportSubmitted(false), 4000);
     }, 800);
   };
@@ -73,8 +73,8 @@ const Help: React.FC = () => {
       <div className="flex gap-2 flex-shrink-0 p-1 rounded-2xl"
         style={{ background: 'rgba(15,17,23,0.6)', border: '1px solid rgba(99,102,241,0.2)' }}>
         {[
-          { key: 'help',   icon: 'fa-phone-flip',  label: 'Emergency Help', color: '#f43f5e', glow: 'rgba(244,63,94,0.4)'  },
-          { key: 'report', icon: 'fa-flag',         label: 'Report Scam',   color: '#6366f1', glow: 'rgba(99,102,241,0.4)' },
+          { key: 'help',   icon: 'fa-phone-flip',  label: ui.helpTitle,   color: '#f43f5e', glow: 'rgba(244,63,94,0.4)'  },
+          { key: 'report', icon: 'fa-flag',         label: ui.reportTitle, color: '#6366f1', glow: 'rgba(99,102,241,0.4)' },
         ].map(({ key, icon, label, color, glow }) => {
           const active = activeSection === key;
           return (
@@ -103,8 +103,8 @@ const Help: React.FC = () => {
               <i className="fa-solid fa-heart text-base animate-heartbeat" style={{ color: '#f43f5e' }}></i>
             </div>
             <div>
-              <p className="text-sm font-black" style={{ color: '#fda4af' }}>Huwag Mangamba</p>
-              <p className="text-xs font-bold" style={{ color: '#94a3b8' }}>Hindi ka nag-iisa. Nandito kami para sa iyo.</p>
+              <p className="text-sm font-black" style={{ color: '#fda4af' }}>{ui.dontWorry}</p>
+              <p className="text-xs font-bold" style={{ color: '#94a3b8' }}>{ui.notAlone}</p>
             </div>
           </div>
 
@@ -124,8 +124,8 @@ const Help: React.FC = () => {
             </div>
 
             <div className="text-center z-10">
-              <p className="font-black text-base uppercase tracking-widest" style={{ color: '#fda4af' }}>PINDUTIN ITO</p>
-              <p className="text-xs font-bold mt-0.5" style={{ color: 'rgba(253,164,175,0.6)' }}>Para tumawag ng saklolo</p>
+              <p className="font-black text-base uppercase tracking-widest" style={{ color: '#fda4af' }}>{ui.pressThis}</p>
+              <p className="text-xs font-bold mt-0.5" style={{ color: 'rgba(253,164,175,0.6)' }}>{ui.callHelp}</p>
             </div>
 
             <button onClick={handleHelp}
@@ -143,7 +143,7 @@ const Help: React.FC = () => {
               }}>
               {called && <div className="absolute inset-0 rounded-full animate-pulse" style={{ background: 'rgba(244,63,94,0.15)' }} />}
               <i className={`fa-solid fa-phone-flip text-4xl z-10 ${called ? 'animate-bounce' : ''}`}></i>
-              <span className="text-lg font-black uppercase tracking-tight z-10">TULONG!</span>
+              <span className="text-lg font-black uppercase tracking-tight z-10">{ui.tulong}</span>
             </button>
           </div>
 

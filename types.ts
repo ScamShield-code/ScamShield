@@ -4,6 +4,8 @@ export interface ScamAnalysis {
   confidence: number;
   reasonTagalog: string;
   actionTagalog: string;
+  reasonEnglish: string;
+  actionEnglish: string;
 }
 
 export interface AwarenessArticle {

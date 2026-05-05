@@ -1,8 +1,9 @@
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import { AwarenessArticle } from '../types';
-import { playVoiceWarning, stopVoice } from '../services/geminiService';
+import { LangContext } from '../App';
+import { t } from '../services/languageService';
 
 const SCAMS: AwarenessArticle[] = [
   {
@@ -159,37 +160,14 @@ const TIPS = [
 ];
 
 const Awareness: React.FC = () => {
+  const { lang } = useContext(LangContext);
+  const ui = t(lang);
   const [selected, setSelected] = useState<AwarenessArticle | null>(null);
   const [currentTip, setCurrentTip] = useState(0);
-  const [isSpeaking, setIsSpeaking] = useState(false);
 
-  useEffect(() => {
-    return () => {
-      stopVoice();
-    };
-  }, []);
-
-  const handleNextTip = () => {
-    setCurrentTip((currentTip + 1) % TIPS.length);
-  };
-
-  const handleSelect = (scam: AwarenessArticle) => {
-    setSelected(scam);
-    // Automatically speak the title to confirm selection
-    playVoiceWarning(`Tungkol po ito sa ${scam.title}.`);
-  };
-
-  const handleListenDetails = async () => {
-    if (!selected) return;
-    setIsSpeaking(true);
-    await playVoiceWarning(selected.details);
-    setIsSpeaking(false);
-  };
-
-  const handleClose = () => {
-    setSelected(null);
-    stopVoice();
-  };
+  const handleNextTip = () => setCurrentTip((currentTip + 1) % TIPS.length);
+  const handleSelect = (scam: AwarenessArticle) => setSelected(scam);
+  const handleClose = () => setSelected(null);
 
   return (
     <div className="h-full overflow-y-auto pb-4 space-y-3 animate-fadeIn">
@@ -201,10 +179,10 @@ const Awareness: React.FC = () => {
           style={{ background: 'radial-gradient(circle,rgba(99,102,241,0.3),transparent)' }} />
         <h2 className="text-xl font-black relative z-10"
           style={{ background: 'linear-gradient(90deg,#e0e7ff,#a5b4fc,#67e8f9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-          Handog na Karunungan
+          {ui.awarenessTitle}
         </h2>
         <p className="text-xs font-bold mt-0.5 relative z-10" style={{ color: 'rgba(165,180,252,0.7)' }}>
-          Matuto tayo para laging ligtas!
+          {ui.awarenessSub}
         </p>
       </div>
 
@@ -215,7 +193,7 @@ const Awareness: React.FC = () => {
           <i className="fa-solid fa-lightbulb text-4xl" style={{ color: '#f59e0b' }}></i>
         </div>
         <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: '#f59e0b' }}>
-          Paalala:
+          {ui.tipLabel}
         </p>
         <p className="text-sm font-bold leading-snug mb-3" style={{ color: '#e2e8f0' }}>
           "{TIPS[currentTip]}"
@@ -224,12 +202,7 @@ const Awareness: React.FC = () => {
           <button onClick={handleNextTip}
             className="flex items-center gap-1.5 text-xs font-black transition-all active:scale-95"
             style={{ color: '#818cf8' }}>
-            Ibang payo <i className="fa-solid fa-arrow-right text-xs"></i>
-          </button>
-          <button onClick={() => playVoiceWarning(TIPS[currentTip])}
-            className="flex items-center gap-1.5 text-xs font-black transition-all active:scale-95"
-            style={{ color: '#94a3b8' }}>
-            <i className="fa-solid fa-volume-high"></i> Pakinggan
+            {ui.nextTip} <i className="fa-solid fa-arrow-right text-xs"></i>
           </button>
         </div>
       </div>
@@ -239,7 +212,7 @@ const Awareness: React.FC = () => {
         <h3 className="text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2 px-1"
           style={{ color: '#94a3b8' }}>
           <i className="fa-solid fa-shield-halved" style={{ color: '#6366f1' }}></i>
-          Mga Dapat Iwasan ({SCAMS.length})
+          {ui.scamsToAvoid} ({SCAMS.length})
         </h3>
         <div className="flex flex-col gap-2">
           {SCAMS.map((scam, idx) => (
@@ -308,18 +281,6 @@ const Awareness: React.FC = () => {
                 </p>
               </div>
 
-              <button onClick={handleListenDetails}
-                className="w-full py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-95"
-                style={{
-                  background: 'rgba(99,102,241,0.15)',
-                  color: '#818cf8',
-                  border: '1px solid rgba(99,102,241,0.35)',
-                  boxShadow: isSpeaking ? '0 0 16px rgba(99,102,241,0.4)' : 'none',
-                }}>
-                <i className={`fa-solid ${isSpeaking ? 'fa-spinner animate-spin' : 'fa-circle-play'}`}></i>
-                {isSpeaking ? 'Nagsasalita...' : 'Pakinggan ang Detalye'}
-              </button>
-
               <button onClick={handleClose}
                 className="w-full py-3.5 rounded-xl font-black text-sm transition-all active:scale-95"
                 style={{
@@ -327,7 +288,7 @@ const Awareness: React.FC = () => {
                   color: '#fff',
                   boxShadow: '0 0 20px rgba(99,102,241,0.4)',
                 }}>
-                Salamat, Naintindihan ko
+                {ui.understood}
               </button>
             </div>
           </div>

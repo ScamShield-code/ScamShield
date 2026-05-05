@@ -1,7 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ScamAnalysis, ScamReport, RiskLevel, ScamType, UserIncidentReport, CommunityAlert } from "../types";
 import { cacheService } from "./cacheService";
-import { getElevenLabsService } from "./elevenLabsService";
 
 const DB_NAME = 'GabayLigtasAudioDBV13';
 const STORE_NAME = 'audio_cache';
@@ -193,315 +192,23 @@ export const clearCommunityAlerts = (): void => {
   sessionStorage.removeItem(ALERT_SESSION_KEY);
 };
 
-const audioCache = new Map<string, AudioBuffer>();
-let audioCtx: AudioContext | null = null;
-const activeSources = new Set<AudioBufferSourceNode>();
-let currentSpeechId = 0;
-
 const clearOldDatabases = async () => {
   try {
     const currentVersion = localStorage.getItem(CACHE_VERSION_KEY);
     if (currentVersion !== CURRENT_CACHE_VERSION) {
-      const oldVersions = ['GabayLigtasAudioDBV12', 'GabayLigtasAudioDBV11', 'GabayLigtasAudioDBV10'];
-      for (const oldDB of oldVersions) {
-        try {
-          await new Promise<void>((resolve) => {
-            const req = indexedDB.deleteDatabase(oldDB);
-            req.onsuccess = () => resolve();
-            req.onerror = () => resolve();
-            req.onblocked = () => resolve();
-          });
-        } catch { /* continue */ }
-      }
-      audioCache.clear();
       localStorage.setItem(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
     }
-  } catch (error) {
-    console.error('Error clearing old databases:', error);
-  }
+  } catch { /* ignore */ }
 };
-
 clearOldDatabases();
 
-const openDB = (): Promise<IDBDatabase> =>
-  new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = () => request.result.createObjectStore(STORE_NAME);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-
-const getAudioFromDB = async (key: string): Promise<Uint8Array | null> => {
-  try {
-    const db = await openDB();
-    return new Promise((resolve) => {
-      const request = db.transaction(STORE_NAME).objectStore(STORE_NAME).get(key);
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => resolve(null);
-    });
-  } catch { return null; }
-};
-
-const normalizePhonetic = (text: string): string => {
-  const replacements: Record<string, string> = {
-    'scam': 'is-kam', 'Scam': 'Iskam', 'link': 'lingk', 'OTP': 'O-T-P',
-    'password': 'pas-word', 'MPIN': 'M-pin', 'online': 'on-layn',
-    'checker': 'che-ker', 'raffle': 'ra-pol', 'click': 'pindutin',
-    'message': 'men-sa-he', 'bank': 'bang-ko', 'suspended': 'na-sus-pend',
-    'verification': 'ber-i-pi-kay-shon', 'GCash': 'Dyi-Kash', 'virus': 'bay-rus',
-    'Facebook': 'Peys-buk', 'emergency': 'e-mer-dyen-si', 'code': 'kod',
-    'download': 'dawn-lowd', 'update': 'ap-deyt', 'account': 'a-ka-unt',
-    'security': 'se-kyu-ri-ti', 'number': 'num-be-ro',
-  };
-  let normalized = text;
-  Object.entries(replacements).forEach(([key, val]) => {
-    normalized = normalized.replace(new RegExp(`\\b${key}\\b`, 'gi'), val);
-  });
-  return normalized;
-};
-
-export const checkQuotaStatus = (): boolean => {
-  const lock = localStorage.getItem(QUOTA_LOCK_KEY);
-  if (!lock) return false;
-  const expiry = parseInt(lock, 10);
-  if (Date.now() > expiry) { localStorage.removeItem(QUOTA_LOCK_KEY); return false; }
-  return true;
-};
-
-export function getAudioContext() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-  }
-  return audioCtx;
-}
-
-export const stopVoice = () => {
-  currentSpeechId++;
-  activeSources.forEach((s) => { try { s.stop(); } catch { /* ignore */ } });
-  activeSources.clear();
-  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-};
-
-export const clearAudioCache = async (): Promise<void> => {
-  try {
-    audioCache.clear();
-    const db = await openDB();
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).clear();
-  } catch (error) {
-    console.error('Failed to clear audio cache:', error);
-  }
-};
-
-if (typeof window !== 'undefined') {
-  (window as any).clearAudioCache = clearAudioCache;
-}
-
-async function decodeAudioData(data: Uint8Array, ctx: AudioContext): Promise<AudioBuffer> {
-  const dataInt16 = new Int16Array(data.buffer, data.byteOffset, data.byteLength / 2);
-  const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
-  const channelData = buffer.getChannelData(0);
-  for (let i = 0; i < dataInt16.length; i++) channelData[i] = dataInt16[i] / 32768.0;
-  return buffer;
-}
-
-// ── Community Alert Sound ────────────────────────────────────────────────────
-export const playCommunityAlertSound = () => {
-  try {
-    const ctx = getAudioContext();
-    if (ctx.state === 'suspended') ctx.resume();
-    const now = ctx.currentTime;
-
-    // Three-tone descending alert: urgent but distinct from scam beep
-    const tones = [
-      { freq: 880, start: now,       dur: 0.18 },
-      { freq: 660, start: now + 0.22, dur: 0.18 },
-      { freq: 440, start: now + 0.44, dur: 0.28 },
-    ];
-
-    tones.forEach(({ freq, start, dur }) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, start);
-      gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(0.18, start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
-      osc.start(start);
-      osc.stop(start + dur + 0.05);
-    });
-  } catch { /* ignore audio errors */ }
-};
-
-export const playNotificationSound = (isScam: boolean) => {
-  const ctx = getAudioContext();
-  if (ctx.state === 'suspended') ctx.resume();
-  const now = ctx.currentTime;
-  if (isScam) {
-    const playBeep = (time: number) => {
-      const osc = ctx.createOscillator(); const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(200, time);
-      osc.frequency.exponentialRampToValueAtTime(100, time + 0.15);
-      gain.gain.setValueAtTime(0.1, time);
-      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
-      osc.start(time); osc.stop(time + 0.15);
-    };
-    playBeep(now); playBeep(now + 0.2);
-  } else {
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(600, now);
-    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
-    osc.frequency.exponentialRampToValueAtTime(1600, now + 0.3);
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-    osc.start(now); osc.stop(now + 0.4);
-  }
-};
-
-export const speakSystem = (text: string) => {
-  if (!('speechSynthesis' in window)) return;
-  stopVoice();
-  const utterance = new SpeechSynthesisUtterance(normalizePhonetic(text));
-  const setVoiceAndSpeak = () => {
-    const voices = window.speechSynthesis.getVoices();
-    const tlVoice =
-      voices.find(v => v.lang.includes('tl-PH')) ||
-      voices.find(v => v.lang.includes('tl')) ||
-      voices.find(v => v.lang.includes('fil')) ||
-      voices.find(v => v.name.toLowerCase().includes('filipino')) ||
-      voices.find(v => v.name.toLowerCase().includes('tagalog')) ||
-      voices.find(v => v.name.toLowerCase().includes('google') && v.lang.includes('en-US')) ||
-      voices.find(v => v.lang.includes('en-US'));
-    if (tlVoice) utterance.voice = tlVoice;
-    utterance.lang = 'tl-PH';
-    utterance.rate = 0.75;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-    utterance.onerror = (e) => console.error('Speech synthesis error:', e);
-    window.speechSynthesis.speak(utterance);
-  };
-  if (window.speechSynthesis.getVoices().length > 0) {
-    setVoiceAndSpeak();
-  } else {
-    window.speechSynthesis.onvoiceschanged = setVoiceAndSpeak;
-  }
-};
-
-const ELEVENLABS_QUOTA_KEY = 'elevenlabs_quota_exceeded_until';
-const ELEVENLABS_KEY_HASH = 'elevenlabs_key_hash';
-
-const isElevenLabsQuotaExceeded = (): boolean => {
-  // If the API key changed, clear the quota lock
-  const currentKey = import.meta.env.VITE_ELEVENLABS_API_KEY || '';
-  const storedHash = localStorage.getItem(ELEVENLABS_KEY_HASH);
-  const currentHash = currentKey.slice(-8); // last 8 chars as simple hash
-  if (storedHash !== currentHash) {
-    localStorage.removeItem(ELEVENLABS_QUOTA_KEY);
-    localStorage.setItem(ELEVENLABS_KEY_HASH, currentHash);
-    return false;
-  }
-  const until = localStorage.getItem(ELEVENLABS_QUOTA_KEY);
-  if (!until) return false;
-  if (Date.now() > parseInt(until, 10)) {
-    localStorage.removeItem(ELEVENLABS_QUOTA_KEY);
-    return false;
-  }
-  return true;
-};
-
-const markElevenLabsQuotaExceeded = (): void => {
-  // Cache quota exceeded state for 24 hours — stops hammering the API
-  localStorage.setItem(ELEVENLABS_QUOTA_KEY, (Date.now() + 24 * 60 * 60 * 1000).toString());
-};
-
-const isAudioBufferCorrupted = (buf: AudioBuffer): boolean => {
-  const ch = buf.getChannelData(0);
-  const avg = ch.reduce((s, v) => s + Math.abs(v), 0) / ch.length;
-  const max = Math.max(...Array.from(ch).map(Math.abs));
-  return buf.duration < 0.5 || avg < 0.001 || max < 0.01 || ch.every(s => Math.abs(s) < 0.001);
-};
-
-const playAudioBuffer = (buf: AudioBuffer, ctx: AudioContext): void => {
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  src.connect(ctx.destination);
-  activeSources.add(src);
-  src.start(0);
-};
-
-export const playVoiceWarning = async (text: string): Promise<void> => {
-  const myId = ++currentSpeechId;
-  const ctx = getAudioContext();
-  if (ctx.state === 'suspended') await ctx.resume().catch(() => {});
-  const cleanText = text.trim();
-
-  // --- Check memory cache ---
-  if (audioCache.has(cleanText)) {
-    try {
-      const buf = audioCache.get(cleanText)!;
-      if (isAudioBufferCorrupted(buf)) {
-        audioCache.delete(cleanText);
-      } else {
-        playAudioBuffer(buf, ctx);
-        return;
-      }
-    } catch (error) {
-      console.error('Failed to play cached audio:', error);
-      audioCache.delete(cleanText);
-    }
-  }
-
-  // --- Check IndexedDB cache ---
-  const storedBytes = await getAudioFromDB(cleanText);
-  if (storedBytes) {
-    try {
-      const buf = await decodeAudioData(storedBytes, ctx);
-      if (isAudioBufferCorrupted(buf)) {
-        await clearAudioCache();
-      } else {
-        audioCache.set(cleanText, buf);
-        if (myId !== currentSpeechId) return;
-        playAudioBuffer(buf, ctx);
-        return;
-      }
-    } catch (error) {
-      console.error('Failed to decode stored audio:', error);
-      await clearAudioCache();
-    }
-  }
-
-  // --- Primary: ElevenLabs TTS ---
-  const elevenLabs = getElevenLabsService();
-  if (elevenLabs && !isElevenLabsQuotaExceeded()) {
-    try {
-      const arrayBuffer = await elevenLabs.generateSpeech(cleanText);
-      // Copy buffer before decoding to avoid detached ArrayBuffer errors
-      const copy = arrayBuffer.slice(0);
-      const audioBuffer = await ctx.decodeAudioData(copy);
-      if (!isAudioBufferCorrupted(audioBuffer)) {
-        audioCache.set(cleanText, audioBuffer);
-        if (myId !== currentSpeechId) return;
-        playAudioBuffer(audioBuffer, ctx);
-        return;
-      }
-    } catch (error: any) {
-      // If quota exceeded, cache that state so we stop retrying for 24 hours
-      if (error?.message?.includes('quota_exceeded') || error?.message?.includes('401')) {
-        markElevenLabsQuotaExceeded();
-      }
-      console.error('ElevenLabs TTS failed, falling back to browser speech:', error);
-    }
-  }
-
-  // --- Fallback: Browser speech synthesis ---
-  speakSystem(cleanText);
-};
+// TTS removed — no audio dependencies needed
+// Stub exports kept for any remaining import references
+export const stopVoice = () => {};
+export const clearAudioCache = async (): Promise<void> => {};
+export const playCommunityAlertSound = () => {};
+export const playNotificationSound = (_isScam: boolean) => {};
+export const playVoiceWarning = async (_text: string): Promise<void> => {};
 
 // ---------------------------------------------------------------------------
 // Pre-screening layer — runs BEFORE Gemini to maximise Recall.
@@ -762,6 +469,8 @@ const fallbackScorer = (text: string): ScamAnalysis => {
       confidence: pre.confidence,
       reasonTagalog: 'Natuklasan po namin ang isang mapanganib na pattern sa mensaheng ito na karaniwang ginagamit ng mga manloloko sa Pilipinas.',
       actionTagalog: 'Huwag po mag-click, mag-reply, o magbigay ng personal na impormasyon. I-delete na po agad ito.',
+      reasonEnglish: 'We detected a dangerous pattern in this message commonly used by scammers in the Philippines.',
+      actionEnglish: 'Do not click, reply, or share personal information. Delete this message immediately.',
     };
   }
 
@@ -886,6 +595,8 @@ const fallbackScorer = (text: string): ScamAnalysis => {
       confidence: 0.85,
       reasonTagalog: 'Mukhang opisyal na mensahe ito mula sa isang lehitimong telco o kumpanya. Walang nakitang mapanganib na palatandaan.',
       actionTagalog: 'Safe po ito. Maaari na ninyong basahin at sundin ang mga tagubilin.',
+      reasonEnglish: 'This appears to be an official message from a legitimate telco or company. No dangerous indicators found.',
+      actionEnglish: 'This is safe. You may read and follow the instructions.',
     };
   }
 
@@ -949,6 +660,12 @@ const fallbackScorer = (text: string): ScamAnalysis => {
     actionTagalog: isScam
       ? 'Huwag po mag-click, mag-reply, o magbigay ng personal na impormasyon. I-delete na po agad ito.'
       : 'Safe po ito. Maaari na ninyong basahin at mag-reply kung gusto ninyo.',
+    reasonEnglish: isScam
+      ? 'Scam indicators were found in this message. Be cautious of this type of message.'
+      : 'This appears to be a normal message. No dangerous indicators found.',
+    actionEnglish: isScam
+      ? 'Do not click, reply, or share personal information. Delete this message immediately.'
+      : 'This is safe. You may read and reply if you wish.',
   };
 };
 
@@ -969,6 +686,8 @@ export const analyzeMessage = async (text: string): Promise<ScamAnalysis> => {
       confidence: pre.confidence,
       reasonTagalog: 'Natuklasan po namin ang isang mapanganib na pattern sa mensaheng ito na karaniwang ginagamit ng mga manloloko sa Pilipinas.',
       actionTagalog: 'Huwag po mag-click, mag-reply, o magbigay ng personal na impormasyon. I-delete na po agad ito.',
+      reasonEnglish: 'We detected a dangerous pattern in this message commonly used by scammers in the Philippines.',
+      actionEnglish: 'Do not click, reply, or share personal information. Delete this message immediately.',
     };
     cacheService.storeScanResult(text, result);
     return result;
@@ -988,6 +707,8 @@ export const analyzeMessage = async (text: string): Promise<ScamAnalysis> => {
         confidence: 0.85,
         reasonTagalog: 'Mukhang opisyal na mensahe ito mula sa isang lehitimong telco o kumpanya. Walang nakitang mapanganib na palatandaan.',
         actionTagalog: 'Safe po ito. Maaari na ninyong basahin at sundin ang mga tagubilin.',
+        reasonEnglish: 'This appears to be an official message from a legitimate telco or company. No dangerous indicators found.',
+        actionEnglish: 'This is safe. You may read and follow the instructions.',
       };
       cacheService.storeScanResult(text, safeResult);
       return safeResult;
@@ -1003,7 +724,9 @@ export const analyzeMessage = async (text: string): Promise<ScamAnalysis> => {
         isScam: true,
         confidence: reValidate.confidence,
         reasonTagalog: 'Natuklasan po namin ang isang mapanganib na pattern sa mensaheng ito na karaniwang ginagamit ng mga manloloko sa Pilipinas.',
-        actionTagalog: 'Huwag po mag-click, mag-reply, o magbigay ng personal na impormasyon. I-delete na po agad ito.',
+      actionTagalog: 'Huwag po mag-click, mag-reply, o magbigay ng personal na impormasyon. I-delete na po agad ito.',
+      reasonEnglish: 'We detected a dangerous pattern in this message commonly used by scammers in the Philippines.',
+      actionEnglish: 'Do not click, reply, or share personal information. Delete this message immediately.',
       };
       cacheService.storeScanResult(text, overrideResult);
       return overrideResult;
@@ -1059,8 +782,13 @@ DECISION RULES (optimised for high Recall):
 
 SAFE: Normal personal conversations, official telco messages (Globe/Smart/TM/DITO promo expiry, load reminders, rewards points, birthday treats, GlobeOne/MySmart app notifications — especially those with "Ka-TM", "Ka-TeaM", "GlobeOne", "T&Cs apply", "REF#", or "Borrow Load via GCash"), official telco SIM notices (no suspicious link/fee), legitimate delivery tracking (no fee), bank transaction confirmations (no link/OTP request), news articles. Do NOT flag official carrier messages as scams just because they mention GCash, rewards, or promos — these are normal telco marketing.
 
-RESPONSE: JSON only — isScam (bool), confidence (0.0–1.0), reasonTagalog (string), actionTagalog (string).
-Use "po/opo" in Tagalog. Be concise and clear for all users.`;
+RESPONSE: JSON only with these exact fields:
+- isScam (bool)
+- confidence (0.0–1.0)
+- reasonTagalog (string) — explanation in Filipino/Tagalog using "po/opo", concise
+- actionTagalog (string) — recommended action in Filipino/Tagalog
+- reasonEnglish (string) — same explanation in clear English
+- actionEnglish (string) — same recommended action in English`;
 
   try {
     const result = await cacheService.cacheApiCall(
@@ -1086,8 +814,10 @@ Use "po/opo" in Tagalog. Be concise and clear for all users.`;
                 confidence:    { type: Type.NUMBER },
                 reasonTagalog: { type: Type.STRING },
                 actionTagalog: { type: Type.STRING },
+                reasonEnglish: { type: Type.STRING },
+                actionEnglish: { type: Type.STRING },
               },
-              required: ['isScam', 'confidence', 'reasonTagalog', 'actionTagalog'],
+              required: ['isScam', 'confidence', 'reasonTagalog', 'actionTagalog', 'reasonEnglish', 'actionEnglish'],
             },
             systemInstruction: { parts: [{ text: systemInstruction }] },
           },
@@ -1108,6 +838,8 @@ Use "po/opo" in Tagalog. Be concise and clear for all users.`;
             confidence: reCheck.confidence,
             reasonTagalog: parsed.reasonTagalog || 'Natuklasan po namin ang mapanganib na pattern sa mensaheng ito.',
             actionTagalog: 'Huwag po mag-click, mag-reply, o magbigay ng personal na impormasyon. I-delete na po agad ito.',
+            reasonEnglish: parsed.reasonEnglish || 'We detected a dangerous pattern in this message.',
+            actionEnglish: 'Do not click, reply, or share personal information. Delete this message immediately.',
           };
         }
 

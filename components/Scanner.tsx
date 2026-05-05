@@ -1,57 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { analyzeMessage, playVoiceWarning, stopVoice, playNotificationSound, saveReport, updateReportFeedback, clearAudioCache } from '../services/geminiService';
+import React, { useState, useRef, useContext } from 'react';
+import { analyzeMessage, saveReport, updateReportFeedback } from '../services/geminiService';
 import { ScamAnalysis } from '../types';
 import CommunityAlertBanner from './CommunityAlertBanner';
+import { LangContext } from '../App';
+import { t } from '../services/languageService';
 
 const S = {
   surface: { background: 'rgba(26,29,46,0.9)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '1.25rem' },
 };
 
-const ConfidenceMeter: React.FC<{ confidence: number; isScam: boolean }> = ({ confidence, isScam }) => {
-  const pct = Math.round((isScam ? confidence : 1 - confidence) * 100);
-  const [width, setWidth] = useState(0);
-  useEffect(() => { setWidth(0); const t = setTimeout(() => setWidth(pct), 150); return () => clearTimeout(t); }, [pct, isScam]);
-
-  const high = isScam && confidence > 0.7;
-  const mid  = isScam && confidence > 0.4 && confidence <= 0.7;
-  const barColor = high ? 'linear-gradient(90deg,#f43f5e,#be123c)' : mid ? 'linear-gradient(90deg,#f59e0b,#ea580c)' : isScam ? 'linear-gradient(90deg,#fbbf24,#f59e0b)' : 'linear-gradient(90deg,#10b981,#059669)';
-  const glowColor = high ? 'rgba(244,63,94,0.6)' : mid ? 'rgba(245,158,11,0.5)' : isScam ? 'rgba(251,191,36,0.4)' : 'rgba(16,185,129,0.5)';
-  const label = high ? 'Mataas ang Panganib!' : mid ? 'Katamtamang Panganib' : isScam ? 'Duda sa Panganib' : 'Mababa ang Panganib';
-  const icon  = high ? 'fa-skull-crossbones' : mid ? 'fa-triangle-exclamation' : isScam ? 'fa-eye' : 'fa-shield-check';
-  const iconColor = high ? '#f43f5e' : mid ? '#f59e0b' : isScam ? '#fbbf24' : '#10b981';
-
-  return (
-    <div className="rounded-2xl p-4 space-y-3 relative overflow-hidden"
-      style={{ ...S.surface, boxShadow: high ? `0 0 24px ${glowColor}` : 'none', border: `1px solid ${glowColor}` }}>
-      {high && <div className="absolute inset-0 pointer-events-none animate-danger-pulse" />}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: `${iconColor}20`, border: `1px solid ${iconColor}50`, boxShadow: `0 0 12px ${glowColor}` }}>
-            <i className={`fa-solid ${icon} text-base ${high ? 'animate-pulse' : ''}`} style={{ color: iconColor }}></i>
-          </div>
-          <div>
-            <p className="text-xs font-black uppercase tracking-widest" style={{ color: '#475569' }}>Status</p>
-            <p className="text-base font-black" style={{ color: high ? '#f43f5e' : '#e2e8f0' }}>{label}</p>
-          </div>
-        </div>
-        <span className="text-2xl font-black" style={{ color: iconColor, textShadow: `0 0 12px ${glowColor}` }}>{width}%</span>
-      </div>
-      <div className="h-3 rounded-full overflow-hidden" style={{ background: 'rgba(15,17,23,0.8)', border: '1px solid rgba(99,102,241,0.15)' }}>
-        <div className="h-full rounded-full transition-all duration-[1200ms] ease-out"
-          style={{ width: `${width}%`, background: barColor, boxShadow: `0 0 10px ${glowColor}` }} />
-      </div>
-      {high && (
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full animate-ping" style={{ background: '#f43f5e' }} />
-          <p className="text-xs font-black" style={{ color: '#fda4af' }}>⚠ HIGH RISK — Do not engage with this message</p>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const Scanner: React.FC = () => {
+  const { lang } = useContext(LangContext);
+  const ui = t(lang);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScamAnalysis | null>(null);
@@ -63,38 +23,63 @@ const Scanner: React.FC = () => {
   const handleScan = async () => {
     if (!inputText.trim() || loading) return;
     const myId = ++currentScanId.current;
-    stopVoice(); setResult(null); setLoading(true);
+    setResult(null); setLoading(true);
     try {
       const analysis = await analyzeMessage(inputText);
       if (myId !== currentScanId.current) return;
-      playNotificationSound(analysis.isScam);
       setResult(analysis); setLoading(false); setFeedback(null);
       const reportId = saveReport(inputText, analysis);
       setLastReportId(reportId);
-      if (analysis.isScam && analysis.confidence >= 0.7) { setShowAlert(true); setTimeout(() => setShowAlert(false), 6000); }
-      playVoiceWarning(`${analysis.reasonTagalog} ${analysis.actionTagalog}`);
+      if (analysis.isScam && analysis.confidence >= 0.7) {
+        setShowAlert(true);
+        setTimeout(() => setShowAlert(false), 6000);
+      }
     } catch {
-      if (myId === currentScanId.current) { setLoading(false); playVoiceWarning("Pasensya na po, hindi ko po ma-check ngayon. Subukan po nating muli mamaya."); }
+      if (myId === currentScanId.current) setLoading(false);
     }
   };
 
   const handleClear = () => {
-    setInputText(''); setResult(null); setFeedback(null); setLastReportId(null); setShowAlert(false); stopVoice();
-    try { clearAudioCache(); if ('indexedDB' in window) indexedDB.deleteDatabase('GabayLigtasAudioDBV13'); } catch { /* ignore */ }
-    playVoiceWarning("Binura na ang detalye. Handa na muli ang checker.");
+    setInputText(''); setResult(null); setFeedback(null);
+    setLastReportId(null); setShowAlert(false);
   };
+
+  const reason = result ? (lang === 'fil' ? result.reasonTagalog : result.reasonEnglish) : '';
+  const action = result ? (lang === 'fil' ? result.actionTagalog : result.actionEnglish) : '';
+
+  const getIconColor = (r: ScamAnalysis) =>
+    r.isScam && r.confidence > 0.7 ? '#f43f5e' :
+    r.isScam && r.confidence > 0.4 ? '#f59e0b' :
+    r.isScam ? '#fbbf24' : '#10b981';
+
+  const getBarGradient = (r: ScamAnalysis) =>
+    r.isScam && r.confidence > 0.7 ? 'linear-gradient(90deg,#f43f5e,#be123c)' :
+    r.isScam && r.confidence > 0.4 ? 'linear-gradient(90deg,#f59e0b,#ea580c)' :
+    r.isScam ? 'linear-gradient(90deg,#fbbf24,#f59e0b)' :
+    'linear-gradient(90deg,#10b981,#059669)';
+
+  const getStatusIcon = (r: ScamAnalysis) =>
+    r.isScam && r.confidence > 0.7 ? 'fa-skull-crossbones' :
+    r.isScam && r.confidence > 0.4 ? 'fa-triangle-exclamation' :
+    r.isScam ? 'fa-eye' : 'fa-shield-check';
+
+  const getRiskLabel = (r: ScamAnalysis) =>
+    !r.isScam ? ui.riskSafe :
+    r.confidence > 0.7 ? ui.riskHigh :
+    r.confidence > 0.4 ? ui.riskMid : ui.riskLow;
+
+  const pct = result ? Math.round((result.isScam ? result.confidence : 1 - result.confidence) * 100) : 0;
 
   return (
     <div className="h-full flex flex-col gap-2">
 
-      {/* High-risk alert — inline, not fixed */}
       {showAlert && (
         <div className="flex-shrink-0 px-4 py-3 rounded-2xl flex items-center gap-3 animate-slideDown"
           style={{ background: 'linear-gradient(135deg,#4c0519,#9f1239)', border: '1px solid rgba(244,63,94,0.6)', boxShadow: '0 0 24px rgba(244,63,94,0.4)' }}>
           <i className="fa-solid fa-triangle-exclamation animate-pulse shrink-0" style={{ color: '#fbbf24' }}></i>
           <div className="flex-1">
-            <p className="font-black text-xs uppercase tracking-wide" style={{ color: '#fda4af' }}>⚠ High-Risk Scam Detected!</p>
-            <p className="text-xs font-bold" style={{ color: 'rgba(253,164,175,0.7)' }}>Do not click links or share personal info.</p>
+            <p className="font-black text-xs uppercase tracking-wide" style={{ color: '#fda4af' }}>{ui.highRiskAlert}</p>
+            <p className="text-xs font-bold" style={{ color: 'rgba(253,164,175,0.7)' }}>{ui.highRiskSub}</p>
           </div>
           <button onClick={() => setShowAlert(false)} style={{ color: 'rgba(253,164,175,0.6)' }}>
             <i className="fa-solid fa-xmark text-sm"></i>
@@ -102,10 +87,9 @@ const Scanner: React.FC = () => {
         </div>
       )}
 
-      {/* Community alert */}
       <div className="flex-shrink-0"><CommunityAlertBanner /></div>
 
-      {/* Input card — fixed size */}
+      {/* Input card */}
       <div className="flex-shrink-0 rounded-2xl p-4 flex flex-col gap-3 relative overflow-hidden"
         style={{ ...S.surface, boxShadow: loading ? '0 0 20px rgba(99,102,241,0.3)' : 'none' }}>
         {loading && (
@@ -116,14 +100,15 @@ const Scanner: React.FC = () => {
         )}
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500"
-            style={loading ? { background: 'linear-gradient(135deg,#6366f1,#06b6d4)', boxShadow: '0 0 16px rgba(99,102,241,0.6)' }
+            style={loading
+              ? { background: 'linear-gradient(135deg,#6366f1,#06b6d4)', boxShadow: '0 0 16px rgba(99,102,241,0.6)' }
               : { background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)' }}>
             <i className={`fa-solid ${loading ? 'fa-satellite-dish animate-pulse' : 'fa-paste'} text-sm`}
               style={{ color: loading ? '#fff' : '#818cf8' }}></i>
           </div>
           <div>
-            <p className="text-sm font-black" style={{ color: '#e2e8f0' }}>Mensahe o Link na kahina-hinala</p>
-            <p className="text-xs font-bold" style={{ color: '#475569' }}>I-paste dito ang text o link</p>
+            <p className="text-sm font-black" style={{ color: '#e2e8f0' }}>{ui.scannerTitle}</p>
+            <p className="text-xs font-bold" style={{ color: '#475569' }}>{ui.scannerSub}</p>
           </div>
         </div>
         <div className="relative">
@@ -134,7 +119,7 @@ const Scanner: React.FC = () => {
               border: loading ? '1px solid rgba(99,102,241,0.4)' : '1px solid rgba(99,102,241,0.2)',
               color: '#e2e8f0', opacity: loading ? 0.6 : 1,
             }}
-            placeholder="Ex. 'Nanalo ka ng 50k! I-click ang link na ito...'"
+            placeholder={lang === 'fil' ? "Ex. 'Nanalo ka ng 50k! I-click ang link na ito...'" : "Ex. 'You won 50k! Click this link...'"}
             value={inputText} readOnly={loading}
             onChange={e => setInputText(e.target.value)}
           />
@@ -148,26 +133,61 @@ const Scanner: React.FC = () => {
         <div className="flex gap-2">
           <button onClick={handleScan} disabled={loading || !inputText.trim()}
             className="flex-1 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-95 relative overflow-hidden"
-            style={loading ? { background: 'linear-gradient(135deg,#312e81,#1e40af)', color: '#a5b4fc', cursor: 'wait', boxShadow: '0 0 20px rgba(99,102,241,0.3)' }
-              : !inputText.trim() ? { background: 'rgba(30,27,75,0.4)', color: '#334155', cursor: 'not-allowed' }
+            style={loading
+              ? { background: 'linear-gradient(135deg,#312e81,#1e40af)', color: '#a5b4fc', cursor: 'wait', boxShadow: '0 0 20px rgba(99,102,241,0.3)' }
+              : !inputText.trim()
+              ? { background: 'rgba(30,27,75,0.4)', color: '#334155', cursor: 'not-allowed' }
               : { background: 'linear-gradient(135deg,#6366f1,#818cf8,#06b6d4)', color: '#fff', boxShadow: '0 0 20px rgba(99,102,241,0.5)' }}>
             {loading
-              ? <><div className="absolute inset-0 shimmer-sweep" /><i className="fa-solid fa-microchip animate-spin-slow"></i> SINUSURI...</>
-              : <><i className="fa-solid fa-magnifying-glass-shield"></i> ISURI ITO</>}
+              ? <><div className="absolute inset-0 shimmer-sweep" /><i className="fa-solid fa-microchip animate-spin-slow"></i> {ui.scanning}</>
+              : <><i className="fa-solid fa-magnifying-glass-shield"></i> {ui.scanBtn}</>}
           </button>
           <button onClick={handleClear} disabled={loading}
             className="px-4 py-3 rounded-xl font-black text-xs flex items-center justify-center gap-1 transition-all active:scale-95 disabled:opacity-40"
-            style={{ background: 'rgba(71,85,105,0.2)', color: '#64748b', border: '1px solid rgba(71,85,105,0.3)' }}>
+            style={{ background: 'rgba(71,85,105,0.2)', color: '#64748b', border: '1px solid rgba(71,85,105,0.3)' }}
+            title={ui.clearBtn}>
             <i className="fa-solid fa-eraser"></i>
           </button>
         </div>
       </div>
 
-      {/* Results — scrollable only when content exists */}
+      {/* Results */}
       <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pb-1">
         {result && (
           <div className="space-y-2 animate-popIn">
-            <ConfidenceMeter confidence={result.confidence} isScam={result.isScam} />
+            {/* Confidence meter */}
+            <div className="rounded-2xl p-4 space-y-3 relative overflow-hidden"
+              style={{ ...S.surface, border: `1px solid ${getIconColor(result)}60` }}>
+              {result.isScam && result.confidence > 0.7 && <div className="absolute inset-0 pointer-events-none animate-danger-pulse" />}
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: `${getIconColor(result)}20`, border: `1px solid ${getIconColor(result)}50` }}>
+                    <i className={`fa-solid ${getStatusIcon(result)} text-base ${result.isScam && result.confidence > 0.7 ? 'animate-pulse' : ''}`}
+                      style={{ color: getIconColor(result) }}></i>
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest" style={{ color: '#475569' }}>Status</p>
+                    <p className="text-base font-black" style={{ color: result.isScam && result.confidence > 0.7 ? '#f43f5e' : '#e2e8f0' }}>
+                      {getRiskLabel(result)}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-2xl font-black" style={{ color: getIconColor(result) }}>{pct}%</span>
+              </div>
+              <div className="h-3 rounded-full overflow-hidden" style={{ background: 'rgba(15,17,23,0.8)' }}>
+                <div className="h-full rounded-full transition-all duration-[1200ms] ease-out"
+                  style={{ width: `${pct}%`, background: getBarGradient(result) }} />
+              </div>
+              {result.isScam && result.confidence > 0.7 && (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full animate-ping" style={{ background: '#f43f5e' }} />
+                  <p className="text-xs font-black" style={{ color: '#fda4af' }}>{ui.highRiskNote}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Result card */}
             <div className="rounded-2xl p-4 relative overflow-hidden"
               style={result.isScam ? {
                 background: 'linear-gradient(160deg,rgba(76,5,25,0.9),rgba(30,5,15,0.95))',
@@ -193,44 +213,44 @@ const Scanner: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-lg font-black" style={{ color: result.isScam ? '#fda4af' : '#6ee7b7' }}>
-                    {result.isScam ? 'DELIKADO PO!' : 'LIGTAS PO ITO'}
+                    {result.isScam ? ui.scamLabel : ui.safeLabel}
                   </h4>
-                  <p className="text-xs font-bold" style={{ color: '#475569' }}>Gabay ni Apo</p>
+                  <p className="text-xs font-bold" style={{ color: '#475569' }}>ScamShield AI</p>
                 </div>
               </div>
               <div className="space-y-2 relative z-10">
                 <div className="rounded-xl p-3" style={{ background: 'rgba(15,17,23,0.6)', border: '1px solid rgba(99,102,241,0.15)' }}>
-                  <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: '#475569' }}>Paliwanag ni Apo:</p>
-                  <p className="text-sm font-bold leading-snug" style={{ color: '#e2e8f0' }}>{result.reasonTagalog}</p>
+                  <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: '#475569' }}>{ui.analysisLabel}</p>
+                  <p className="text-sm font-bold leading-snug" style={{ color: '#e2e8f0' }}>{reason}</p>
                 </div>
                 <div className="rounded-xl p-3 text-center"
                   style={result.isScam
                     ? { background: 'linear-gradient(135deg,rgba(244,63,94,0.25),rgba(190,18,60,0.25))', border: '1px solid rgba(244,63,94,0.4)' }
                     : { background: 'linear-gradient(135deg,rgba(16,185,129,0.2),rgba(5,150,105,0.2))', border: '1px solid rgba(16,185,129,0.35)' }}>
-                  <p className="text-sm font-black leading-snug" style={{ color: result.isScam ? '#fda4af' : '#6ee7b7' }}>
-                    {result.actionTagalog}
-                  </p>
+                  <p className="text-sm font-black leading-snug" style={{ color: result.isScam ? '#fda4af' : '#6ee7b7' }}>{action}</p>
                 </div>
               </div>
             </div>
+
+            {/* Feedback */}
             {lastReportId && (
               <div className="rounded-2xl p-3" style={{ ...S.surface }}>
                 <p className="text-xs font-black uppercase tracking-widest mb-2 text-center" style={{ color: '#475569' }}>
-                  Was this result accurate?
+                  {ui.feedbackQ}
                 </p>
                 {feedback ? (
                   <div className="flex items-center justify-center gap-2">
                     <i className={`fa-solid ${feedback === 'correct' ? 'fa-circle-check' : 'fa-circle-xmark'} text-lg`}
                       style={{ color: feedback === 'correct' ? '#10b981' : '#f43f5e' }}></i>
                     <span className="text-sm font-black" style={{ color: '#94a3b8' }}>
-                      {feedback === 'correct' ? 'Thanks! Feedback recorded.' : "Thanks! We'll use this to improve."}
+                      {feedback === 'correct' ? ui.feedbackThanks : ui.feedbackImprove}
                     </span>
                   </div>
                 ) : (
                   <div className="flex gap-2">
                     {([
-                      { val: 'correct' as const,   icon: 'fa-thumbs-up',   label: 'Yes, Correct', color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.35)' },
-                      { val: 'incorrect' as const, icon: 'fa-thumbs-down', label: 'No, Wrong',    color: '#f43f5e', bg: 'rgba(244,63,94,0.12)',  border: 'rgba(244,63,94,0.35)'  },
+                      { val: 'correct' as const,   icon: 'fa-thumbs-up',   label: ui.feedbackYes, color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.35)' },
+                      { val: 'incorrect' as const, icon: 'fa-thumbs-down', label: ui.feedbackNo,  color: '#f43f5e', bg: 'rgba(244,63,94,0.12)',  border: 'rgba(244,63,94,0.35)'  },
                     ]).map(({ val, icon, label, color, bg, border }) => (
                       <button key={val}
                         onClick={() => { setFeedback(val); updateReportFeedback(lastReportId, val); }}
@@ -245,13 +265,14 @@ const Scanner: React.FC = () => {
             )}
           </div>
         )}
+
         {!result && !loading && (
           <div className="h-full flex flex-col items-center justify-center pointer-events-none animate-float" style={{ minHeight: '100px' }}>
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-2"
               style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
               <i className="fa-solid fa-shield-halved text-2xl" style={{ color: 'rgba(99,102,241,0.4)' }}></i>
             </div>
-            <p className="text-xs font-black uppercase tracking-widest" style={{ color: '#334155' }}>Laging Maging Alerto at Ligtas</p>
+            <p className="text-xs font-black uppercase tracking-widest" style={{ color: '#334155' }}>{ui.emptyState}</p>
           </div>
         )}
       </div>

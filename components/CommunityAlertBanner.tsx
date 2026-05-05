@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CommunityAlert } from '../types';
-import { getActiveAlerts, dismissAlertForSession, playCommunityAlertSound } from '../services/geminiService';
+import { getActiveAlerts, dismissAlertForSession } from '../services/geminiService';
 
 const SCAM_TYPE_ICONS: Record<string, string> = {
   'Phishing':          'fa-fish',
@@ -27,7 +27,6 @@ const CommunityAlertBanner: React.FC = () => {
       setCurrentIndex(0);
       setTimeout(() => {
         setVisible(true);
-        playCommunityAlertSound(); // Play alert sound when banner appears
       }, 800);
     }
   }, []);

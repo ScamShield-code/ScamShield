@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
 import { AppTab } from './types';
 import Scanner from './components/Scanner';
 import Awareness from './components/Awareness';
@@ -8,7 +8,13 @@ import AdminDashboard from './components/AdminDashboard';
 import SplashScreen from './components/SplashScreen';
 import PWAUpdateNotification from './components/PWAUpdateNotification';
 import { stopVoice } from './services/geminiService';
+import { getLanguage, setLanguage, AppLanguage, t } from './services/languageService';
 import './services/pwaService';
+
+// ── Language Context ─────────────────────────────────────────────────────────
+export const LangContext = createContext<{ lang: AppLanguage; setLang: (l: AppLanguage) => void }>({
+  lang: 'fil', setLang: () => {},
+});
 
 const ADMIN_PIN = '1234';
 const ADMIN_SESSION_KEY = 'scamshield_admin_session';
@@ -115,8 +121,12 @@ const App: React.FC = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminUnlocked, setAdminUnlocked] = useState(isAdminSessionActive);
+  const [lang, setLangState] = useState<AppLanguage>(getLanguage);
   const tapCount = useRef(0);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSetLang = (l: AppLanguage) => { setLanguage(l); setLangState(l); };
+  const ui = t(lang);
 
   useEffect(() => {
     const t = setTimeout(() => setShowSplash(false), 3000);
@@ -152,6 +162,7 @@ const App: React.FC = () => {
   const allTabs = adminUnlocked ? [...NAV_TABS, ADMIN_TAB] : NAV_TABS;
 
   return (
+    <LangContext.Provider value={{ lang, setLang: handleSetLang }}>
     <div className="h-screen flex flex-col w-full max-w-md mx-auto relative overflow-hidden sm:max-w-lg md:max-w-xl lg:max-w-2xl"
       style={{ background: 'linear-gradient(160deg,#0f1117 0%,#131629 60%,#0f1117 100%)', boxShadow: '0 0 80px rgba(99,102,241,0.15)' }}>
 
@@ -165,10 +176,9 @@ const App: React.FC = () => {
           background: 'linear-gradient(135deg,#1e1b4b 0%,#312e81 40%,#1e40af 100%)',
           borderBottom: '1px solid rgba(99,102,241,0.35)',
           boxShadow: '0 4px 30px rgba(99,102,241,0.25)',
-          padding: '1.25rem 1rem 1.5rem',
+          padding: '1rem 1rem 1.25rem',
           borderRadius: '0 0 2rem 2rem',
         }}>
-        {/* Decorative orbs */}
         <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-20 pointer-events-none"
           style={{ background: 'radial-gradient(circle,#818cf8,transparent)' }} />
         <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full opacity-15 pointer-events-none"
@@ -181,18 +191,34 @@ const App: React.FC = () => {
               ScamShield
             </h1>
             <p className="text-xs font-bold mt-0.5" style={{ color: 'rgba(165,180,252,0.8)' }}>
-              Your Online Safety Companion
+              {ui.subtitle}
             </p>
           </div>
-          <button onClick={handleHeaderIconTap}
-            className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-90 relative overflow-hidden"
-            style={{
-              background: 'rgba(99,102,241,0.15)',
-              border: '1px solid rgba(99,102,241,0.35)',
-              boxShadow: '0 0 16px rgba(99,102,241,0.25)',
-            }}>
-            <img src="/icons/scamshield-logo.svg" alt="ScamShield" className="w-9 h-9" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            {/* Language toggle */}
+            <div className="flex rounded-xl overflow-hidden"
+              style={{ border: '1px solid rgba(99,102,241,0.35)', background: 'rgba(99,102,241,0.1)' }}>
+              {(['fil', 'en'] as AppLanguage[]).map(l => (
+                <button key={l} onClick={() => handleSetLang(l)}
+                  className="px-2.5 py-1.5 text-xs font-black transition-all"
+                  style={lang === l ? {
+                    background: 'linear-gradient(135deg,#6366f1,#818cf8)',
+                    color: '#fff',
+                    boxShadow: '0 0 10px rgba(99,102,241,0.5)',
+                  } : { color: 'rgba(165,180,252,0.6)' }}>
+                  {l === 'fil' ? 'FIL' : 'ENG'}
+                </button>
+              ))}
+            </div>
+
+            {/* Logo / admin trigger */}
+            <button onClick={handleHeaderIconTap}
+              className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all active:scale-90"
+              style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.35)', boxShadow: '0 0 16px rgba(99,102,241,0.25)' }}>
+              <img src="/icons/scamshield-logo.svg" alt="ScamShield" className="w-8 h-8" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -231,6 +257,7 @@ const App: React.FC = () => {
         })}
       </nav>
     </div>
+    </LangContext.Provider>
   );
 };
 
