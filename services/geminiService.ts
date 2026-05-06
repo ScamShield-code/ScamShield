@@ -243,18 +243,37 @@ const preScreenScam = (text: string): PreScreenResult => {
   // A spoofed copy that adds a link, asks you to SEND the OTP, or omits the
   // anti-scam warning will NOT match and will proceed to normal scam checks.
   const isLegitGcashOtpConfirmation = (() => {
+    // Core structural markers of the real GCash OTP confirmation SMS
     const hasDidYouRequest   = /did you request/i.test(t);
     const hasSendMoney       = /send money/i.test(t);
-    const hasGcashNumber     = /gcash number/i.test(t);
-    const hasAntiScamWarning = /don'?t enter your otp|do not enter your otp|don'?t share|do not share/i.test(t);
-    const hasConditionalOtp  = /if you requested.*your otp is|your otp is.*\d{4,8}/i.test(t);
-    // Disqualifiers: any link, or asking user to SEND/SHARE the OTP
+    const hasGcashNumber     = /gcash\s*number/i.test(t);
+    // GCash's own anti-scam warning embedded in the message
+    const hasAntiScamWarning = /don'?t enter your otp|do not enter your otp/i.test(t);
+    // OTP reveal is conditional ("If you requested...") — may be absent if user
+    // only copied the first half of the message, so treat as optional bonus
+    const hasConditionalOtp  = /if you requested[^.]*your otp is\s*\d{4,8}/i.test(t);
+    // Hard disqualifiers
     const hasLink            = /https?:\/\/|www\.|bit\.ly|cutt\.ly|tinyurl/i.test(t);
-    const asksToSendOtp      = /\b(send|ibigay|ibahagi|share|ipadala|i-send)\b.*\botp\b|\botp\b.*\b(send|ibigay|ibahagi|share|ipadala|i-send)\b/i.test(t);
+    // Scammers instruct you TO send/give the OTP to them.
+    // The legit GCash message says "SEND IT TO ANYONE" as a WARNING (preceded by DON'T).
+    // We detect the scam pattern: imperative "send/share/give [us] your OTP"
+    // by requiring the instruction NOT be preceded by "don't" / "do not".
+    const asksToSendOtp = (() => {
+      // Scammer imperatively tells you to send/give OTP (Filipino verbs)
+      const imperativeSend = /\b(ibigay|ibahagi|ipadala|i-send)\b.*\botp\b/i.test(t);
+      // "send your otp to me/us/this number"
+      const sendOtpTo = /\botp\b.*\bsend\s+(?:it\s+)?to\s+(?:me|us|this|our|my)\b/i.test(t);
+      // "enter your otp on/at/here" — phishing instruction.
+      // The legit GCash message says "DON'T ENTER YOUR OTP ON ANY SITE" — a warning.
+      // We only flag the imperative form (not preceded by "don't" / "do not").
+      const enterOtpOnSite = /(?<!don'?t\s{0,5})(?<!do\s+not\s{0,5})enter\s+your\s+otp\s+(?:on|at|in|here)/i.test(t);
+      return imperativeSend || sendOtpTo || enterOtpOnSite;
+    })();
 
+    // Must have all 4 core markers + no disqualifiers.
+    // hasConditionalOtp is a strong bonus but not required (message may be truncated).
     return hasDidYouRequest && hasSendMoney && hasGcashNumber &&
-           hasAntiScamWarning && hasConditionalOtp &&
-           !hasLink && !asksToSendOtp;
+           hasAntiScamWarning && !hasLink && !asksToSendOtp;
   })();
 
   if (isLegitGcashOtpConfirmation) {
@@ -306,7 +325,11 @@ const preScreenScam = (text: string): PreScreenResult => {
   if (/^https?:\/\/(bit\.ly|cutt\.ly|tinyurl\.com|rb\.gy|is\.gd|v\.gd|t\.co|short\.link|ow\.ly|goo\.gl|tiny\.cc|lnkd\.in)\/\S+$/i.test(text.trim()))
     return { isDefiniteScam: true, confidence: 0.97 };
   if (/\b(otp|one.time.pin|one.time.password|mpin|passcode)\b/i.test(t) &&
-      /\b(send|ibigay|ibahagi|share|enter|ilagay|i-type|type)\b/i.test(t))
+      /\b(send|ibigay|ibahagi|share|enter|ilagay|i-type|type)\b/i.test(t) &&
+      // Exception: the legit GCash warning says "DON'T SEND IT TO ANYONE" and
+      // "DON'T ENTER YOUR OTP ON ANY SITE" — these are warnings, not instructions.
+      // Only flag if the message is NOT the GCash transaction-verification format.
+      !/did you request.*send money.*gcash/i.test(t))
     return { isDefiniteScam: true, confidence: 0.97 };
   if (/natanggap|nakatanggap|received|na-credit/i.test(t) &&
       /₱|php|piso|pesos/i.test(t) &&
@@ -467,7 +490,10 @@ const preScreenScam = (text: string): PreScreenResult => {
 
   if (hasShortUrl && hasMoneyOffer)             return { isDefiniteScam: true, confidence: 0.95 };
   if (hasShortUrl && hasUrgency)                return { isDefiniteScam: true, confidence: 0.94 };
-  if (hasBankBrand && hasCred)                  return { isDefiniteScam: true, confidence: 0.96 };
+  if (hasBankBrand && hasCred &&
+      // Exception: legit GCash OTP confirmation contains both gcash + otp but is safe
+      !/did you request.*send money.*gcash/i.test(t))
+                                    return { isDefiniteScam: true, confidence: 0.96 };
   if (hasGovBrand && (hasCred || (hasLink && hasUrgency))) return { isDefiniteScam: true, confidence: 0.95 };
   if (hasPrize && hasLink)                      return { isDefiniteScam: true, confidence: 0.93 };
   if (hasPrize && hasMoneyReq)                  return { isDefiniteScam: true, confidence: 0.95 };
