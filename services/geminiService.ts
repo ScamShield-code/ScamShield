@@ -223,6 +223,45 @@ interface PreScreenResult {
 const preScreenScam = (text: string): PreScreenResult => {
   const t = text.toLowerCase();
 
+  // ── LEGIT GCASH OTP CONFIRMATION FORMAT — runs FIRST ───────────────────
+  // GCash sends a specific OTP confirmation message that asks the user to verify
+  // a SEND MONEY transaction. The message explicitly warns NOT to share the OTP.
+  // This is a legitimate security message — NOT a scam.
+  //
+  // Legitimate format:
+  //   "Did you request to SEND MONEY to [name]'s GCash number, [phone] with
+  //    amount of PHP [amount]? If not, DON'T ENTER YOUR OTP ON ANY SITE OR
+  //    SEND IT TO ANYONE because IT'S A SCAM! If you requested, your OTP is [code]."
+  //
+  // We validate ALL of these structural markers must be present:
+  //   1. "Did you request" — GCash's own question phrasing
+  //   2. "SEND MONEY" — the transaction type
+  //   3. "GCash number" — confirms it's a GCash transaction
+  //   4. "DON'T ENTER YOUR OTP" or "DON'T SHARE" — the anti-scam warning
+  //   5. "If you requested, your OTP is" — the conditional OTP reveal
+  //
+  // A spoofed copy that adds a link, asks you to SEND the OTP, or omits the
+  // anti-scam warning will NOT match and will proceed to normal scam checks.
+  const isLegitGcashOtpConfirmation = (() => {
+    const hasDidYouRequest   = /did you request/i.test(t);
+    const hasSendMoney       = /send money/i.test(t);
+    const hasGcashNumber     = /gcash number/i.test(t);
+    const hasAntiScamWarning = /don'?t enter your otp|do not enter your otp|don'?t share|do not share/i.test(t);
+    const hasConditionalOtp  = /if you requested.*your otp is|your otp is.*\d{4,8}/i.test(t);
+    // Disqualifiers: any link, or asking user to SEND/SHARE the OTP
+    const hasLink            = /https?:\/\/|www\.|bit\.ly|cutt\.ly|tinyurl/i.test(t);
+    const asksToSendOtp      = /\b(send|ibigay|ibahagi|share|ipadala|i-send)\b.*\botp\b|\botp\b.*\b(send|ibigay|ibahagi|share|ipadala|i-send)\b/i.test(t);
+
+    return hasDidYouRequest && hasSendMoney && hasGcashNumber &&
+           hasAntiScamWarning && hasConditionalOtp &&
+           !hasLink && !asksToSendOtp;
+  })();
+
+  if (isLegitGcashOtpConfirmation) {
+    return { isDefiniteScam: false, confidence: 0 };
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
   // ── LEGIT TELCO / BANK EARLY EXIT — runs FIRST before any scam rules ────
   // If the message is clearly from an official PH telco, skip all scam checks.
   const hasOfficialTelcoMarker =
@@ -781,6 +820,18 @@ DECISION RULES (optimised for high Recall):
 - When uncertain, lean toward isScam: true (false negative is more harmful)
 
 SAFE: Normal personal conversations, official telco messages (Globe/Smart/TM/DITO promo expiry, load reminders, rewards points, birthday treats, GlobeOne/MySmart app notifications — especially those with "Ka-TM", "Ka-TeaM", "GlobeOne", "T&Cs apply", "REF#", or "Borrow Load via GCash"), official telco SIM notices (no suspicious link/fee), legitimate delivery tracking (no fee), bank transaction confirmations (no link/OTP request), news articles. Do NOT flag official carrier messages as scams just because they mention GCash, rewards, or promos — these are normal telco marketing.
+
+SPECIAL CASE — LEGITIMATE GCASH OTP CONFIRMATION MESSAGE:
+GCash sends a specific transaction-verification SMS that contains an OTP but is NOT a scam. It follows this exact structure:
+  "Did you request to SEND MONEY to [masked name]'s GCash number, [phone] with amount of PHP [amount]? If not, DON'T ENTER YOUR OTP ON ANY SITE OR SEND IT TO ANYONE because IT'S A SCAM! If you requested, your OTP is [code]."
+This message is SAFE (isScam: false) when ALL of these are true:
+  1. It asks "Did you request to SEND MONEY"
+  2. It references a "GCash number"
+  3. It explicitly warns "DON'T ENTER YOUR OTP ON ANY SITE OR SEND IT TO ANYONE"
+  4. It reveals the OTP only conditionally ("If you requested, your OTP is...")
+  5. There is NO external link (no http://, www., bit.ly, etc.)
+  6. It does NOT ask the user to send or share the OTP to anyone
+A spoofed version of this message that adds a link, removes the anti-scam warning, or asks the user to forward the OTP IS a scam and should be flagged.
 
 RESPONSE: JSON only with these exact fields:
 - isScam (bool)
