@@ -1,6 +1,6 @@
 {
-  "name": "ScamShield: Cyber-Guardian",
-  "short_name": "ScamShield",
+  "name": "Nexus: Cyber-Guardian",
+  "short_name": "Nexus",
   "description": "A Filipino cybercrime awareness and scam alert system for everyone",
   "start_url": "/",
   "display": "standalone",

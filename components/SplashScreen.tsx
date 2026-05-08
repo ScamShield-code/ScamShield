@@ -44,7 +44,7 @@ const SplashScreen: React.FC = () => {
             <div className="absolute inset-2 rounded-[2rem] animate-pulse-glow"
               style={{ border: '1px solid rgba(99,102,241,0.3)' }} />
             {/* SVG Logo */}
-            <img src="/icons/scamshield-logo.svg" alt="ScamShield" className="w-32 h-32 relative z-10" />
+            <img src="/icons/nexus-logo.jpg" alt="Nexus" className="w-32 h-32 relative z-10" />
           </div>
 
           {/* Orbiting dot */}
@@ -66,7 +66,7 @@ const SplashScreen: React.FC = () => {
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
               filter: 'drop-shadow(0 0 20px rgba(99,102,241,0.5))',
             }}>
-            SCAMSHIELD
+            NEXUS
           </h1>
           <div className="h-0.5 w-32 mx-auto rounded-full"
             style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#06b6d4,transparent)' }} />

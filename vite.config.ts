@@ -20,8 +20,8 @@ export default defineConfig(({ mode }) => {
           },
           includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
           manifest: {
-            name: 'ScamShield: Cyber-Guardian',
-            short_name: 'ScamShield',
+            name: 'Nexus: Cyber-Guardian',
+            short_name: 'Nexus',
             description: 'A cybersecurity awareness app for everyone to help stay safe online from scams and cybercrime',
             theme_color: '#2563eb',
             background_color: '#f0f4f8',

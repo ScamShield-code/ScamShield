@@ -215,7 +215,7 @@ const Scanner: React.FC = () => {
                   <h4 className="text-lg font-black" style={{ color: result.isScam ? '#fda4af' : '#6ee7b7' }}>
                     {result.isScam ? ui.scamLabel : ui.safeLabel}
                   </h4>
-                  <p className="text-xs font-bold" style={{ color: '#475569' }}>ScamShield AI</p>
+                  <p className="text-xs font-bold" style={{ color: '#475569' }}>Nexus AI</p>
                 </div>
               </div>
               <div className="space-y-2 relative z-10">

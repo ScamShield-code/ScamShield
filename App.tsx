@@ -17,7 +17,7 @@ export const LangContext = createContext<{ lang: AppLanguage; setLang: (l: AppLa
 });
 
 const ADMIN_PIN = '1234';
-const ADMIN_SESSION_KEY = 'scamshield_admin_session';
+const ADMIN_SESSION_KEY = 'nexus_admin_session';
 
 const isAdminSessionActive = (): boolean => {
   const expiry = localStorage.getItem(ADMIN_SESSION_KEY);
@@ -188,7 +188,7 @@ const App: React.FC = () => {
           <div>
             <h1 className="text-2xl font-black tracking-tight uppercase"
               style={{ background: 'linear-gradient(90deg,#e0e7ff,#a5b4fc,#67e8f9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              ScamShield
+              Nexus
             </h1>
             <p className="text-xs font-bold mt-0.5" style={{ color: 'rgba(165,180,252,0.8)' }}>
               {ui.subtitle}
@@ -216,7 +216,7 @@ const App: React.FC = () => {
             <button onClick={handleHeaderIconTap}
               className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all active:scale-90"
               style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.35)', boxShadow: '0 0 16px rgba(99,102,241,0.25)' }}>
-              <img src="/icons/scamshield-logo.svg" alt="ScamShield" className="w-8 h-8" />
+              <img src="/icons/nexus-logo.jpg" alt="Nexus" className="w-8 h-8" />
             </button>
           </div>
         </div>
