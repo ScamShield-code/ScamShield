@@ -216,7 +216,7 @@ const App: React.FC = () => {
             <button onClick={handleHeaderIconTap}
               className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all active:scale-90"
               style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.35)', boxShadow: '0 0 16px rgba(99,102,241,0.25)' }}>
-              <img src="/icons/nexus-logo.jpg" alt="Nexus" className="w-8 h-8" />
+              <img src="/icons/nexus-logo.jpg" alt="Nexus" className="w-8 h-8 rounded-xl object-cover" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }} />
             </button>
           </div>
         </div>

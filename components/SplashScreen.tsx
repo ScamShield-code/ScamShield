@@ -43,8 +43,13 @@ const SplashScreen: React.FC = () => {
             {/* Animated inner ring */}
             <div className="absolute inset-2 rounded-[2rem] animate-pulse-glow"
               style={{ border: '1px solid rgba(99,102,241,0.3)' }} />
-            {/* SVG Logo */}
-            <img src="/icons/nexus-logo.jpg" alt="Nexus" className="w-32 h-32 relative z-10" />
+            {/* Logo with styling */}
+            <img src="/icons/nexus-logo.jpg" alt="Nexus" 
+              className="w-32 h-32 relative z-10 rounded-3xl object-cover" 
+              style={{ 
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 0 0 3px rgba(99,102,241,0.3)',
+                border: '2px solid rgba(255,255,255,0.1)'
+              }} />
           </div>
 
           {/* Orbiting dot */}
