@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
           devOptions: {
             enabled: false // Disable service worker in development
           },
-          includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+          includeAssets: ['favicon.ico', 'nexus-logo.jpg'],
           manifest: {
             name: 'Nexus: Cyber-Guardian',
             short_name: 'Nexus',
@@ -31,33 +31,21 @@ export default defineConfig(({ mode }) => {
             start_url: '/',
             icons: [
               {
-                src: '/icons/icon-192x192.png',
+                src: '/icons/nexus-logo.jpg',
                 sizes: '192x192',
-                type: 'image/png',
+                type: 'image/jpeg',
                 purpose: 'maskable any'
               },
               {
-                src: '/icons/icon-512x512.png',
+                src: '/icons/nexus-logo.jpg',
                 sizes: '512x512',
-                type: 'image/png',
+                type: 'image/jpeg',
                 purpose: 'maskable any'
-              },
-              {
-                src: '/icons/icon-384x384.png',
-                sizes: '384x384',
-                type: 'image/png',
-                purpose: 'any'
-              },
-              {
-                src: '/icons/icon-144x144.png',
-                sizes: '144x144',
-                type: 'image/png',
-                purpose: 'any'
               }
             ]
           },
           workbox: {
-            globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+            globPatterns: ['**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff,woff2}'],
             runtimeCaching: [
               {
                 urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
