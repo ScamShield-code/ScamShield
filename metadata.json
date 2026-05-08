@@ -1,5 +1,5 @@
 {
-  "name": "Nexus: Cyber-Guardian",
+  "name": "ScamShield: Cyber-Guardian",
   "description": "A Filipino cybercrime awareness and scam alert system for everyone, featuring scam link scanning, voice warnings in Tagalog, and easy help access.",
   "requestFramePermissions": [
     "microphone"

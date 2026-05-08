@@ -18,10 +18,10 @@ export default defineConfig(({ mode }) => {
           devOptions: {
             enabled: false // Disable service worker in development
           },
-          includeAssets: ['favicon.ico', 'nexus-logo.jpg'],
+          includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
           manifest: {
-            name: 'Nexus: Cyber-Guardian',
-            short_name: 'Nexus',
+            name: 'ScamShield: Cyber-Guardian',
+            short_name: 'ScamShield',
             description: 'A cybersecurity awareness app for everyone to help stay safe online from scams and cybercrime',
             theme_color: '#2563eb',
             background_color: '#f0f4f8',
@@ -31,21 +31,33 @@ export default defineConfig(({ mode }) => {
             start_url: '/',
             icons: [
               {
-                src: '/icons/nexus-logo.jpg',
+                src: '/icons/icon-192x192.png',
                 sizes: '192x192',
-                type: 'image/jpeg',
+                type: 'image/png',
                 purpose: 'maskable any'
               },
               {
-                src: '/icons/nexus-logo.jpg',
+                src: '/icons/icon-512x512.png',
                 sizes: '512x512',
-                type: 'image/jpeg',
+                type: 'image/png',
                 purpose: 'maskable any'
+              },
+              {
+                src: '/icons/icon-384x384.png',
+                sizes: '384x384',
+                type: 'image/png',
+                purpose: 'any'
+              },
+              {
+                src: '/icons/icon-144x144.png',
+                sizes: '144x144',
+                type: 'image/png',
+                purpose: 'any'
               }
             ]
           },
           workbox: {
-            globPatterns: ['**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff,woff2}'],
+            globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
             runtimeCaching: [
               {
                 urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

@@ -1,7 +1,7 @@
 // Language preference service — persists to localStorage
 export type AppLanguage = 'fil' | 'en';
 
-const LANG_KEY = 'nexus_language';
+const LANG_KEY = 'scamshield_language';
 
 export const getLanguage = (): AppLanguage => {
   return (localStorage.getItem(LANG_KEY) as AppLanguage) || 'fil';

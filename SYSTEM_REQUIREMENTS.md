@@ -4,7 +4,7 @@
 
 ## Hardware Requirements
 
-Nexus is a Progressive Web App (PWA) designed to run on any modern device with a browser. No specialized hardware is required.
+ScamShield is a Progressive Web App (PWA) designed to run on any modern device with a browser. No specialized hardware is required.
 
 ### Minimum Hardware (End Users)
 
@@ -81,7 +81,7 @@ Nexus is a Progressive Web App (PWA) designed to run on any modern device with a
 
 ## System Components
 
-Nexus is composed of the following major components:
+ScamShield is composed of the following major components:
 
 ### 1. Frontend Application (`/components`, `App.tsx`, `index.tsx`)
 
@@ -157,10 +157,10 @@ All user data is stored locally on the device. No backend database is used.
 
 | Storage Key | Contents | Retention |
 |---|---|---|
-| `nexus_reports` | Auto-scan results (up to 500 records, sensitive data masked) | Until manually cleared |
-| `nexus_user_reports` | User-submitted incident reports (up to 200 records) | Until manually cleared |
-| `nexus_community_alerts` | Admin-confirmed scam alerts (up to 20) | Until manually cleared |
-| `nexus_admin_session` | Admin session token | 30-minute expiry |
+| `scamshield_reports` | Auto-scan results (up to 500 records, sensitive data masked) | Until manually cleared |
+| `scamshield_user_reports` | User-submitted incident reports (up to 200 records) | Until manually cleared |
+| `scamshield_community_alerts` | Admin-confirmed scam alerts (up to 20) | Until manually cleared |
+| `scamshield_admin_session` | Admin session token | 30-minute expiry |
 | `cache_*` | Gemini API response cache | 1-hour expiry per entry |
 
 ### 8. PWA Manifest & Service Worker (`public/manifest.json`, Workbox)
@@ -205,7 +205,7 @@ Enables offline functionality and installability. Caching strategies:
 
 ## Methodology Used
 
-Nexus was developed using the following methodologies and design principles:
+ScamShield was developed using the following methodologies and design principles:
 
 ### 1. Agile / Iterative Development
 
@@ -260,4 +260,4 @@ This combines automated detection with human verification to improve accuracy an
 
 ---
 
-*Document version: 1.0 — Nexus: Gabay Ligtas Cyber-Guardian*
+*Document version: 1.0 — ScamShield: Gabay Ligtas Cyber-Guardian*

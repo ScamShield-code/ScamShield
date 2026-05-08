@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nexus</title>
+    <title>ScamShield</title>
     
     <!-- PWA Meta Tags -->
     <meta name="description" content="A cybersecurity awareness app for everyone to help stay safe online from scams and cybercrime" />
     <meta name="theme-color" content="#2563eb" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Nexus" />
+    <meta name="apple-mobile-web-app-title" content="ScamShield" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="msapplication-config" content="/icons/browserconfig.xml" />
@@ -21,15 +21,14 @@
     <link rel="manifest" href="/manifest.json" />
     
     <!-- Icons -->
-    <link rel="icon" href="/icons/nexus-logo.jpg" type="image/jpeg" />
-    <link rel="apple-touch-icon" href="/icons/nexus-logo.jpg" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/nexus-logo.jpg" />
+    <link rel="icon" href="/icons/scamshield-logo.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/icon-32x32.png" sizes="32x32" type="image/png" />
+    <link rel="icon" href="/icons/icon-16x16.png" sizes="16x16" type="image/png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon (1).png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
     
-    <!-- Styles - Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <noscript>
-      <link rel="stylesheet" href="https://unpkg.com/tailwindcss@3.4.0/dist/tailwind.min.css">
-    </noscript>
+    <!-- Styles -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap');
@@ -219,39 +218,6 @@
         color: #e2e8f0;
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@google/genai": "https://esm.sh/@google/genai@^1.38.0"
-  }
-}
-</script>
-
-<!-- Tailwind CSS Detection and Fallback -->
-<script>
-  // Check if Tailwind CSS loaded properly
-  window.addEventListener('load', function() {
-    setTimeout(function() {
-      // Test if Tailwind classes are working
-      const testElement = document.createElement('div');
-      testElement.className = 'bg-blue-500 text-white p-4 hidden';
-      document.body.appendChild(testElement);
-      
-      const computedStyle = window.getComputedStyle(testElement);
-      const hasBlueBackground = computedStyle.backgroundColor === 'rgb(59, 130, 246)';
-      
-      document.body.removeChild(testElement);
-      
-      if (!hasBlueBackground) {
-        // Add fallback classes to body
-        document.body.classList.add('tailwind-fallback');
-      }
-    }, 1000);
-  });
-</script>
 </head>
   <body>
     <div id="root"></div>

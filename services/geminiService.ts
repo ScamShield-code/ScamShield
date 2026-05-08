@@ -8,8 +8,8 @@ const QUOTA_LOCK_KEY = 'gabay_ligtas_quota_lock_v13';
 const CACHE_VERSION_KEY = 'gabay_ligtas_cache_version';
 const CURRENT_CACHE_VERSION = '13';
 
-const REPORTS_KEY = 'nexus_reports';
-const USER_REPORTS_KEY = 'nexus_user_reports';
+const REPORTS_KEY = 'scamshield_reports';
+const USER_REPORTS_KEY = 'scamshield_user_reports';
 
 // Objective 7: Mask sensitive data before storing
 const maskSensitiveData = (text: string): string => {
@@ -123,8 +123,8 @@ export const clearUserReports = (): void => {
 };
 
 // ── Community Alerts ────────────────────────────────────────────────────────
-const ALERTS_KEY = 'nexus_community_alerts';
-const ALERT_SESSION_KEY = 'nexus_dismissed_alerts';
+const ALERTS_KEY = 'scamshield_community_alerts';
+const ALERT_SESSION_KEY = 'scamshield_dismissed_alerts';
 
 export const getCommunityAlerts = (): CommunityAlert[] => {
   try { return JSON.parse(localStorage.getItem(ALERTS_KEY) || '[]'); } catch { return []; }
@@ -164,7 +164,7 @@ export const dismissAlert = (alertId: string): void => {
     const alerts = getCommunityAlerts();
     const idx = alerts.findIndex(a => a.id === alertId);
     if (idx !== -1) {
-      const sessionKey = localStorage.getItem('nexus_admin_session') || 'user';
+      const sessionKey = localStorage.getItem('scamshield_admin_session') || 'user';
       if (!alerts[idx].dismissedBy.includes(sessionKey)) {
         alerts[idx].dismissedBy.push(sessionKey);
       }

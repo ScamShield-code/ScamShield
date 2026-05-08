@@ -1,4 +1,4 @@
-# Nexus — Your Online Safety Companion
+# ScamShield — Your Online Safety Companion
 
 A Progressive Web App (PWA) designed to protect all Filipino users from online scams through AI-powered detection, community reporting, real-time alerts, and cybersecurity awareness.
 
@@ -22,7 +22,7 @@ A Progressive Web App (PWA) designed to protect all Filipino users from online s
 
 ## Overview
 
-Nexus is a Filipino cybercrime awareness and scam detection system built as a mobile-first Progressive Web App. It uses a 3-layer AI pipeline (rule engine → Gemini LLM → fallback scorer) to analyze suspicious messages and links in real time, covering 20+ scam types commonly encountered by Filipinos.
+ScamShield is a Filipino cybercrime awareness and scam detection system built as a mobile-first Progressive Web App. It uses a 3-layer AI pipeline (rule engine → Gemini LLM → fallback scorer) to analyze suspicious messages and links in real time, covering 20+ scam types commonly encountered by Filipinos.
 
 The system is aligned with the following objectives:
 
@@ -234,7 +234,7 @@ VITE_ELEVENLABS_VOICE_ID=your_voice_id_here
 ## Project Structure
 
 ```
-Nexus/
+ScamShield/
 ├── components/
 │   ├── Scanner.tsx          # Scam checker tab
 │   ├── Awareness.tsx        # Kaalaman / education tab
@@ -268,7 +268,7 @@ Nexus/
 
 - **Local storage only** — all scan results, user reports, and trusted contact data are stored on-device. Nothing is sent to external servers except the message text to the Gemini API for analysis.
 - **Automatic data masking** — phone numbers, email addresses, and account numbers are masked before storage using regex patterns.
-- **No PII collection** — Nexus does not collect names, device identifiers, or any personally identifiable information.
+- **No PII collection** — ScamShield does not collect names, device identifiers, or any personally identifiable information.
 - **Right to erasure** — users and admins can delete all stored data at any time from the Admin Dashboard Privacy tab.
 - **RA 10173 compliant** — designed in accordance with the Data Privacy Act of 2012 of the Philippines.
 - **Admin access control** — the admin dashboard is hidden from regular users and requires a PIN. Sessions expire after 30 minutes.
